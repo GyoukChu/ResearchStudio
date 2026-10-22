@@ -63,9 +63,10 @@ def init_run(run):
         if has_contract(d):
             return
         raise ValueError('Refusing to migrate a nonempty historical run. Use a new run directory.')
+    from scripts.scoop_gate import scoop_from_env
     atomic_json(d / 'run_contract.json', {'contract_version': VERSION,
                 'purpose': 'research proposal; not experimentally validated',
-                'run_id': str(uuid.uuid4()), 'depth': depth_from_env()})
+                'run_id': str(uuid.uuid4()), 'depth': depth_from_env(), 'scoop': scoop_from_env()})
 
 
 def depth_from_env():
@@ -76,6 +77,12 @@ def depth_from_env():
     repair, technical review, falsification-revision route — for a reader who will run the minimal
     experiment. Fixed at init so a run never changes depth midway."""
     return 'experiment' if os.environ.get('IDEASPARK_DEPTH', 'idea').strip().lower() in ('experiment', 'full') else 'idea'
+
+
+def run_scoop_setting(run):
+    """The scoop gate setting fixed at init ({enabled, min_level})."""
+    from scripts.scoop_gate import run_scoop
+    return run_scoop(read(Path(run) / 'run_contract.json', {}))
 
 
 def run_depth(run):
@@ -184,6 +191,9 @@ def record_findings(run, stage, payloads):
     from scripts.validators.korean_sentence_shape import korean_sentence_shape_findings
     from scripts.validators.alias_collateral_coverage import unjustified_collateral
     out = []
+    if stage == 'scoop':
+        from scripts.scoop_gate import contract_findings
+        out += contract_findings(payloads)
     if stage == 'plain_derive':
         for payload in payloads.values():
             out += [f for f in korean_sentence_shape_findings(payload) if f.get('severity') in ('warn', 'fail')]

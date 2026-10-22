@@ -18,7 +18,7 @@ If either input is missing, vague, or conflated (e.g., the "novelty" merely rest
 
 ## Procedure
 
-Execute the steps below in order. At the start of the procedure, use `TaskCreate` to register all seven steps as tasks up front, then mark each as `in_progress` when you begin it and `completed` when you finish. The procedure is long enough that progress tracking is always worth the small overhead — without it, it's easy to skip a step (especially the per-step logging in the Important Notes) or lose track of which candidates still need a deep dive.
+Execute the steps below in order. At the start of the procedure, use `TaskCreate` to register all eight steps as tasks up front, then mark each as `in_progress` when you begin it and `completed` when you finish. The procedure is long enough that progress tracking is always worth the small overhead — without it, it's easy to skip a step (especially the per-step logging in the Important Notes) or lose track of which candidates still need a deep dive.
 
 ### Step 1 — Decompose the Novelty
 
@@ -182,15 +182,30 @@ State the chosen verdict label **with its level number** (e.g., "Level 3 — Med
 
 Note: the *kind* of delta (new territory vs. measurable improvement vs. sideways tradeoff) is already conveyed by the sentence itself and by the verdict, so no separate category label is needed — adding one would just duplicate the verdict on a different axis and invite contradictions (e.g., a "Medium Overlap" verdict paired with a "Strictly new" label).
 
+### Step 8 — Novelty Gate (cutoff)
+
+The verdict above describes overlap; the gate decides whether the novelty claim clears the bar. The bar is **Level 4 — Low Overlap or better**: a proposal passes only when no prior work comes closer than one matching axis.
+
+One axis pair is excused. A novelty claim is always made *for* a research problem, so every paper on that problem matches on **Problem framing** and **Application domain** by construction — without an exception the raw level of a fresh method on a studied problem could never exceed 3. Per prior work:
+
+- **Gate level = 5** when its matching axes lie entirely within {Problem framing, Application domain} (the method axes — Core mechanism and Key insight — are clean).
+- **Gate level = its Step 6 level** otherwise.
+
+The gate result is **PASS** when the minimum gate level across prior works is **≥ 4**, else **FAIL**. Examples: a paper matching only Core mechanism → level 4 → pass; a paper matching Problem framing + Application domain → gate level 5 → pass; a paper matching Core mechanism + Application domain → level 3 → fail. Judge every axis as exactly *match* or *differ* for this step (resolve a Step 5 *partial* to one of them and say which way in the comparison). When idea-spark runs this skill as its Phase 3.4 gate, the same rule decides whether the candidate reaches a card (its bar is fixed per run by `IDEASPARK_SCOOP_MIN_LEVEL`, default 4); a FAIL there sends the run to a new candidate cycle.
+
 ## Report
 
 Render the final report inline in the conversation as a single, self-contained markdown document. Include **all** of the following sections in this exact order, with no omissions or summarization:
 
-1. **Verdict** — exactly one of the five levels from Step 7, stated with its level number and label: **Level 5 — No Overlap (most novel)**, **Level 4 — Low Overlap**, **Level 3 — Medium Overlap**, **Level 2 — High Overlap**, or **Level 1 — Full Overlap (least novel)**.
+1. **Verdict** — exactly one of the five levels from Step 7, stated with its level number and label: **Level 5 — No Overlap (most novel)**, **Level 4 — Low Overlap**, **Level 3 — Medium Overlap**, **Level 2 — High Overlap**, or **Level 1 — Full Overlap (least novel)** — followed on its own line by the **Novelty gate** result from Step 8: **PASS** or **FAIL**, with the gate level and the prior work that decides it.
 2. **Delta** — the one-sentence delta statement from Step 7. If no crisp delta could be written, say so and identify which prior work blocks it.
 3. **Decomposed claim** — the four axes from Step 1, presented as a labeled list (Problem framing, Core mechanism, Key insight, Application domain).
 4. **Structured papers** — every deduplicated paper from Step 3, rendered as a markdown list. For each paper, include one bullet per field (Title, Date, Problem framing, Core mechanism, Key insight, Application domain, Overlap score, Source), matching the field list defined in Step 3. Separate papers with a blank line or a horizontal rule for readability. Do not truncate the list; if zero papers were found, state this explicitly and list the queries that returned no results.
 5. **Comparison result** — the full comparison list from Step 6 (proposed work first, each prior work following), with each entry rendered as a nested bullet list of fields, followed by the per-paper level and label from Step 6's 5-level table — i.e. the axes-matching count, the level (1–5, where 5 = most novel), and the label (*all axes differ* / *three axes differ* / *two axes differ* / *one axis differs* / *all axes match*).
+
+### Languages
+
+English is the main report: render it inline as above. Also write the **complete Korean version** of the same report — a full translation, not a summary — to `${CLAUDE_PROJECT_DIR}/scoop_report.ko.md`, and the English one to `${CLAUDE_PROJECT_DIR}/scoop_report.en.md`. In the Korean version, paper titles, venues, identifiers, method acronyms and math stay in English; technical terms get the English in parentheses on first use; use the plain declarative register (-다). End the inline answer with one line naming both file paths. (In idea-spark's gate mode the two reports go into its result envelope instead; see its `scoop_gate.txt`.)
 
 ## Important Notes
 

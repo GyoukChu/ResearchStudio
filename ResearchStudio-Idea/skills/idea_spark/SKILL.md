@@ -114,6 +114,14 @@ re-reviewing the experiment plan. Start the run with `IDEASPARK_DEPTH=experiment
 when the reader will run the minimal experiment. In both depths candidates state named variables, not
 constants; choosing values is the experimenter's job and is never a blocking finding.
 
+Novelty gate (Phase 3.4): before Phase 4, the scoop-check skill runs on the settled method and the
+program grades it. A candidate passes at Level 4 (Low Overlap) or better, with problem framing and
+application domain excused when they are a prior work's only matches (every paper on the user's problem
+matches there). A refusal starts a new candidate cycle under the bounded retry; when the cycles run out,
+the cycle with the best novelty level becomes the FAILED VALIDATION card. Reports:
+phase3_scoop/scoop_report.en.md (main) and scoop_report.ko.md. `IDEASPARK_SCOOP_MIN_LEVEL` changes the
+bar and `IDEASPARK_SCOOP=off` disables it (both fixed at init).
+
 Three run outcomes: a card; a card marked FAILED VALIDATION (the validation ended in failure and
 the last candidate is printed with a Status line naming the stage and reason; `IDEASPARK_FAILED_CARD=off`
 restores the old refusal, which leaves `phase_3_failed.md` or `needs_work.json` instead); or

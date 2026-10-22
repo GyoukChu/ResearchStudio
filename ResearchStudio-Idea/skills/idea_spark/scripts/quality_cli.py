@@ -12,6 +12,7 @@ from scripts.quality_contract import *
 from scripts.quality_flow import (P1, SEL, GEN, COH, REFINED, CRIT, REV, FINAL, POST, REPAIRED_CAND, REPAIR, ROUNDS, BLOCKING, COST_REVISED, cost_path, FAILED_CARD, P4_FINDINGS, REVISION_BASE,
     SKEL, TECH, IMPL, REPAIRED, TECH_REVIEW, COST, EXP, FIDELITY, authoritative_candidate,
     failure_fingerprint, late_flow)
+from scripts.scoop_gate import SCOOP, SCOOP_REPORT, evaluate, summary, write_reports
 
 
 def require(run, *stages):
@@ -325,6 +326,10 @@ def materialize(d, root, operation, findings_json=None):
         return
     elif operation == 'object_abandon':
         object_abandon(d); return
+    elif operation == 'scoop_report':
+        require(d, 'scoop')
+        outputs = write_reports(d, run_scoop_setting(d)['min_level'])
+        stage = 'scoop_report'; inputs = [SCOOP, SCOOP_REPORT]
     elif operation == 'consistency_patch':
         consistency_patch(d); return
     elif operation == 'phase4_revision':
@@ -362,7 +367,13 @@ def materialize(d, root, operation, findings_json=None):
         # the card stages run on it. The card says FAILED VALIDATION and carries this record.
         nw = read(d / 'needs_work.json', {}); findings = list(nw.get('findings', []))
         stage_name = 'validation'
-        if (d / 'phase_3_failed.md').exists():
+        ev = scoop_failure(d)
+        if (d / 'phase_3_failed.md').exists() and ev:
+            # Every cycle cleared the audit or died before it; this one (the best novelty level on record)
+            # cleared the audit and was refused only by the novelty gate.
+            stage_name = 'scoop (novelty gate)'
+            findings.append(finding('scoop_gate', summary(ev)))
+        elif (d / 'phase_3_failed.md').exists():
             stage_name = 'phase_3'; crit = read(d / CRIT, {})
             findings.append(finding('phase_3_failed', 'audit verdict ' + str(crit.get('verdict')) + ' (' + str(crit.get('verdict_layer')) +
                                     '): ' + str(crit.get('verdict_rationale', ''))[:1500]))
@@ -461,6 +472,10 @@ def versioned_lessons(d, current):
     post = read(d / POST, {})
     if post.get('verdict') == 'redesign':
         lessons.add(('revision', digest(post.get('checks', {}))))
+    ev = scoop_failure(d)
+    if ev:
+        # The closest prior work the gate refused on binds like an unaddressable paper threat.
+        lessons.add(('threat', ('scoop:' + ev['closest']['title'])[:60]))
     return lessons
 
 
@@ -477,6 +492,7 @@ def _attempt_summary(a, label):
             'verdict': crit.get('verdict'), 'layer': crit.get('verdict_layer'),
             'rationale': crit.get('verdict_rationale', ''),
             'upheld': [findings.get(i, {}).get('finding', i) for i in sorted(upheld)],
+            'scoop': scoop_failure(a),
             'candidate': cand}
 
 
@@ -492,10 +508,15 @@ def write_failure_report(d, attempts):
            'refused by the audit on executed or quoted evidence, and the pipeline does not print a mechanism '
            'its own trace refuted. The best cycle is reproduced in full at the end for a reader who wants to '
            'take it further by hand; it is an unaudited draft, not a proposal.', '']
+    if any(r['scoop'] for r in rows):
+        out += ['Cycles refused by the novelty gate (scoop-check on the final method) had cleared the audit. The one with '
+                'the best novelty level is the final cycle here; unless IDEASPARK_FAILED_CARD=off it is printed as a card '
+                'marked FAILED VALIDATION (scoop (novelty gate)), with its novelty reports in phase3_scoop/.', '']
     for r in rows:
         out += [f"## {r['label']}: {r['title']}", '',
                 f"patterns: {', '.join(p for p in r['patterns'] if p)} · verdict: {r['verdict']} ({r['layer']})", '',
-                f"hook: {r['hook']}", '', f"why refused: {r['rationale']}", '']
+                f"hook: {r['hook']}", '',
+                f"why refused: {summary(r['scoop']) if r['scoop'] else r['rationale']}", '']
         for f in r['upheld']: out += [f"- executed finding upheld: {str(f)[:400]}", '']
     c = best['candidate']
     out += [f"## Best cycle in full (unaudited draft): {best['title']}", '',
@@ -510,13 +531,56 @@ def write_failure_report(d, attempts):
                 'upheld_findings': best['upheld'], 'candidate': c})
 
 
+CYCLE_NAMES = ('phase2_select', 'phase2_generate', 'phase2_coherence', 'phase3_collision', 'phase3_critique',
+               'phase3_revise', 'phase3_scoop', 'phase4', '.quality', 'needs_work.json', '.formula_repair_stop',
+               '.repair_retry_used')
+
+
+def scoop_failure(d):
+    """The novelty gate's evaluation when it refused this cycle's committed verdict, else None."""
+    if not (d / SCOOP).exists():
+        return None
+    contract = read(d / 'run_contract.json', {}) or read(d.parent / 'run_contract.json', {})
+    from scripts.scoop_gate import run_scoop
+    ev = evaluate(read(d / SCOOP, {}), run_scoop(contract)['min_level'])
+    return ev if ev and not ev['passed'] else None
+
+
+def restore_best_scoop_cycle(d, attempts):
+    """Budget exhausted on a novelty refusal: the card is printed from the cycle with the best novelty level
+    (gate level, then raw level, then latest). Only cycles refused by the gate alone qualify (they cleared
+    the audit). The chosen cycle's files and receipts move back into place with the contract they were sealed
+    under, and with the Phase 1 they were generated from when a bottleneck re-diagnosis replaced it since;
+    the current cycle is archived like any other."""
+    pool = [(scoop_failure(a), int(a.name[8:]), a) for a in attempts if (a / 'run_contract.json').exists()]
+    pool = [x for x in pool if x[0]]
+    current = scoop_failure(d)
+    best = max(pool, key=lambda x: (x[0]['gate_level'], x[0]['raw_level'], x[1]), default=None)
+    if not best or (best[0]['gate_level'], best[0]['raw_level']) <= (current['gate_level'], current['raw_level']):
+        return
+    _, j, src = best
+    # A bottleneck retry archives the Phase 1 that cycles up to its own index were generated from.
+    p1_src = next((a for a in attempts if int(a.name[8:]) >= j and (a / 'phase1').exists()), None)
+    index = max([int(p.name[8:]) for p in attempts] + [0]) + 1
+    archive = d / f'attempt_{index}'; archive.mkdir(exist_ok=False)
+    for name in CYCLE_NAMES + (('phase1',) if p1_src else ()):
+        if (d / name).exists(): (d / name).rename(archive / name)
+    shutil.copy2(d / 'run_contract.json', archive / 'run_contract.json')
+    if p1_src:
+        (p1_src / 'phase1').rename(d / 'phase1')
+    for name in CYCLE_NAMES:
+        if (src / name).exists(): (src / name).rename(d / name)
+    (src / 'run_contract.json').replace(d / 'run_contract.json')
+    shutil.rmtree(src)
+
+
 def retry(d):
     from scripts.next_step import _attempt_dirs, _lessons
     require(d, 'critique')
     current = read(d / CRIT)
     post = read(d / POST, {}) if receipt_valid(d, 'post_revision') else {}
-    if current.get('verdict') != 'abandon' and post.get('verdict') != 'redesign':
-        raise ValueError('Retry requires an audited abandon/redesign')
+    if current.get('verdict') != 'abandon' and post.get('verdict') != 'redesign' and not scoop_failure(d):
+        raise ValueError('Retry requires an audited abandon/redesign or a novelty-gate refusal')
     attempts = _attempt_dirs(d)
     lessons = versioned_lessons(d, current)
     seen = set().union(*(versioned_lessons(a, read(a / CRIT, {}))
@@ -526,17 +590,20 @@ def retry(d):
     if (d / '.bottleneck_retry_used').exists() or (attempts and not bottleneck and
             (not lessons - seen or len(attempts) + 1 >= 3)):
         # Deterministic diagnostic; no extra model call needed to format a failure.
+        if scoop_failure(d):
+            restore_best_scoop_cycle(d, attempts)
+            attempts = _attempt_dirs(d)
         write_failure_report(d, attempts)
         return
     index = max([int(p.name[8:]) for p in attempts] + [0]) + 1
     archive = d / f'attempt_{index}'; archive.mkdir(exist_ok=False)
-    names = ['phase2_select', 'phase2_generate', 'phase2_coherence', 'phase3_collision',
-             'phase3_critique', 'phase3_revise', 'phase4', '.quality', 'needs_work.json',
-             '.formula_repair_stop', '.repair_retry_used']
+    names = list(CYCLE_NAMES)
     if bottleneck: names.insert(0, 'phase1')
     for name in names:
         target = d / name
         if target.exists(): target.rename(archive / name)
+    # The contract the cycle's receipts were sealed under, so a best cycle can be restored intact.
+    shutil.copy2(d / 'run_contract.json', archive / 'run_contract.json')
     (d / ('.bottleneck_retry_used' if bottleneck else '.retry_used')).touch()
     contract = read(d / 'run_contract.json'); contract['attempt'] = index + 1
     atomic_json(d / 'run_contract.json', contract)

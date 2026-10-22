@@ -11,7 +11,9 @@ from pathlib import Path
 from scripts.quality_contract import (CARDS, VERSION, read, digest, fingerprint, object_level_survivors, run_depth,
     input_hashes, has_contract, receipt_valid, stage_dir, change_scope, selection_findings,
     review_findings, implementability_findings, cost_findings, coherence_findings, critique_findings, candidate_findings, finding,
-    implementation_points, prune_findings, disposition_findings, resolve_finding_ref, repair_findings, claim_texts)
+    implementation_points, prune_findings, disposition_findings, resolve_finding_ref, repair_findings, claim_texts,
+    run_scoop_setting)
+from scripts.scoop_gate import SCOOP, SCOOP_REPORT, REPORT_MD, evaluate, summary
 
 P1 = 'phase1/phase1_output.json'
 SEL = 'phase2_select/phase2_select_output.json'
@@ -54,6 +56,14 @@ def failed_card_enabled():
     """A run whose validation ends in failure still prints its last candidate as a card that says so
     (the user's rule). IDEASPARK_FAILED_CARD=off restores the refusal."""
     return os.environ.get('IDEASPARK_FAILED_CARD', 'on').lower() not in ('off', '0', 'false')
+
+
+def novelty_note(run):
+    """The scoop gate's reports, returned beside the cards (English main + Korean)."""
+    md = [Path(run) / rel for rel in REPORT_MD.values()]
+    if not all(p.exists() for p in md):
+        return ''
+    return (' Novelty report (scoop-check; summarise its Verdict line beside the cards): ' + ' '.join(map(str, md)))
 
 
 def coherence_base(run):
@@ -212,9 +222,12 @@ def late_flow(d, root, failed=False):
     card stages it has not run yet, then publishes as a card marked FAILED VALIDATION."""
     def gate(fs):
         return None if failed else problem(d, root, fs)
+    # Only cycles archived BEFORE this one (contract attempt k ran after attempt_1..k-1): a cycle restored as
+    # the best one keeps the inputs its receipts were sealed with.
+    cycle = read(d / 'run_contract.json', {}).get('attempt', 1)
     retry_inputs = [str(p.relative_to(d)) for p in sorted(d.glob('attempt_*/*/*.json'))
-                    if p.name in ('phase3_critique_output.json', 'post_revision_audit.json',
-                                  'blocking_findings.json', 'phase2_select_output.json')]
+                    if p.parts[-3][8:].isdigit() and int(p.parts[-3][8:]) < cycle and p.name in ('phase3_critique_output.json', 'post_revision_audit.json',
+                                  'blocking_findings.json', 'phase2_select_output.json', 'scoop_verdict.json')]
     # Phase 2 first materialises a slim closest_adjacent slice (phase2_prepare);
     # handing the sub-agent the whole fulltext cache instead is the timeout anti-pattern the
     # host runbook's context discipline exists to prevent. Same deterministic step here.
@@ -450,6 +463,32 @@ def late_flow(d, root, failed=False):
         # `falsification` check), not by a separate re-audit call: 2/2 standalone re-audits in one recorded comparison
         # advanced, each costing a reasoning-tier call.
 
+    # Phase 3.4 — scoop gate. The method is settled (Phase 4 may not change the mechanism), so the full
+    # scoop-check runs on it here, before any Phase 4 call is spent, and a candidate below the novelty bar
+    # goes through the same bounded retry as an audit abandon. In failed mode no new call is spent.
+    setting = run_scoop_setting(d)
+    if setting['enabled'] and (not failed or receipt_valid(d, 'scoop')):
+        pool = ('phase3_revise/collision/collision_hits.json' if (d / 'phase3_revise/collision/collision_hits.json').exists()
+                and selected == FINAL else 'phase3_collision/collision_hits.json')
+        sc = spec(d, root, 'scoop', [selected, SEL, P1, 'phase0/user_query.txt', pool],
+                  [SCOOP, SCOOP_REPORT], ['scoop_gate.txt'],
+                  'Run the scoop-check procedure on the candidate\'s FINAL method as the novelty gate. Record every '
+                  'deep-dive prior work with each axis as exactly match or differ; the program computes the levels. '
+                  'Two artifacts: the structured verdict and the full report in English and in Korean.')
+        sc['inputs'] += [str(root.parent / 'scoop_check/SKILL.md'), str(root.parent / 'paper_search/SKILL.md')]
+        a = pending(d, root, sc)
+        if a: return a
+        ev = evaluate(read(d / SCOOP), setting['min_level'])
+        if ev is None:
+            a = gate([finding('scoop_contract', 'The scoop verdict records no usable per-axis comparison')])
+            if a: return a
+        if not receipt_valid(d, 'scoop_report'):
+            return action('DERIVE', 'Write the novelty reports (English + Korean) from the scoop verdict', 'bash',
+                          run=[command(root, 'quality_materialize', dir=d, operation='scoop_report')])
+        if ev and not ev['passed'] and not failed:
+            return action('ABANDON', 'Novelty gate refused the candidate (' + summary(ev)[:300] + '): apply the existing '
+                          'bounded information-gain retry', 'bash', run=[command(root, 'quality_retry', dir=d)])
+
     if not receipt_valid(d, 'skeleton'):
         return action('DERIVE', 'Build the technical skeleton and source mechanism record', 'bash',
                       run=[command(root, 'quality_materialize', dir=d, operation='skeleton')])
@@ -568,10 +607,10 @@ def late_flow(d, root, failed=False):
             rec = read(d / FAILED_CARD, {})
             return action('DONE', 'Return the last candidate as a card marked FAILED VALIDATION', 'terminal', then=False,
                           notes='FAILED VALIDATION (' + str(rec.get('stage')) + '): ' + str(rec.get('reason', ''))[:300] + ' ' +
-                          ' '.join(str(d / 'phase4' / n) for n in CARDS))
+                          ' '.join(str(d / 'phase4' / n) for n in CARDS) + novelty_note(d))
         return action('DONE', 'Return current-version proposal cards', 'terminal', then=False,
                       notes='Research proposal; not experimentally validated. ' +
-                      ' '.join(str(d / 'phase4' / n) for n in CARDS))
+                      ' '.join(str(d / 'phase4' / n) for n in CARDS) + novelty_note(d))
     fi = spec(d, root, 'fidelity', [EXP, selected, 'phase4/work/mechanism_record.json', cost_path(d), IMPL],
               [FIDELITY], ['fidelity_review.txt'],
               'Required checks: title_anchor, claims, assumptions, operators, evaluation_independence, '
@@ -594,7 +633,7 @@ def late_flow(d, root, failed=False):
                       run=[command(root, 'quality_publish', dir=d)])
     return action('DONE', 'Return current-version proposal cards', 'terminal', then=False,
                   notes='Research proposal; not experimentally validated. ' +
-                  ' '.join(str(d / 'phase4' / n) for n in CARDS))
+                  ' '.join(str(d / 'phase4' / n) for n in CARDS) + novelty_note(d))
 
 
 def _navigate(run, root, query, emit, retrieval):

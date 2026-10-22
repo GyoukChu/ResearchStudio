@@ -44,6 +44,11 @@ Inputs (explicit paths):
   one is refused by the deterministic gate — a different variant of the same object is the pattern
   that produced three consecutive executed abandons on one topic. Change the object, or change
   the anchor gap.
+  An archived `phase3_scoop/scoop_verdict.json` means that cycle cleared the audit but the novelty
+  gate (scoop-check on its final method) refused it: its `prior_works[]` with `core_mechanism` or
+  `key_insight` = match are confirmed prior art for that mechanism. Treat them as unaddressable
+  threats — the new candidate's core mechanism and key insight must both differ from every such paper,
+  not merely be renamed or re-scoped.
 - **OPTIONAL — cross-run dedup**: the host's input list MAY carry a line
   labeled "CROSS-RUN DEDUP" naming candidates recent SIBLING runs already
   produced (title + signature terms each). These are SOFT negative anchors,

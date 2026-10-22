@@ -162,12 +162,16 @@ def _retrieval_next_step(run_dir: Path, root: Path, query: str | None = None, em
                      notes=f'Return {d}/phase_3_failed.md contents as the final response.',
                      then=False)
     cards = [d / 'phase4' / n for n in ('idea.std.en.md', 'idea.std.ko.md', 'idea.detail.en.md')]
+    reports = [d / 'phase3_scoop' / n for n in ('scoop_report.en.md', 'scoop_report.ko.md')]
     if all(c.exists() for c in cards):
         return _emit('DONE — all three idea cards rendered.',
                      'Return the cards inline', 'terminal',
                      notes='Read all three files and return them as the final response under '
                            'headings English (main) / 한국어 / Reviewer version: '
-                           + ', '.join(str(c) for c in cards), then=False)
+                           + ', '.join(str(c) for c in cards)
+                           + ('. Then the novelty gate line (first line of each) and the paths of the scoop-check '
+                              'reports: ' + ', '.join(str(r) for r in reports) if all(r.exists() for r in reports) else ''),
+                     then=False)
 
     p0 = d / 'phase0'
 

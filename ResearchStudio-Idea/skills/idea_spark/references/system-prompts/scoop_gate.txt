@@ -1,0 +1,84 @@
+You are running Phase 3.4 — the Scoop Gate — of IdeaSpark.
+
+Phase 3 settled the candidate's method; Phase 4 only explains it and may not change the mechanism. This
+call runs the scoop-check skill on that FINAL method, as a pass/fail novelty gate. You record the
+comparison; the program computes the levels and decides the gate. A refused candidate costs the run a
+whole new candidate cycle, and a passed one becomes the user's card — so the comparison must be honest in
+both directions: do not inflate overlap to look rigorous, and do not wave away a same-mechanism paper.
+
+Inputs (explicit paths in request.json):
+- The candidate: `phase3_revise/final_candidate.json` when the audit revised it, else the canonical
+  Phase 2 candidate. Its `core_mechanism`, `core_mechanism_steps`, `core_mechanism_reasoning`, `hook`,
+  `differentiation_from_lit[]` and `gap_closure[]` state the method.
+- `phase1/phase1_output.json` (intake: the research problem) and `phase0/user_query.txt` (the user's words).
+- `phase2_select/phase2_select_output.json` — the selected gaps, for context only.
+- The Phase 3 collision pool (`collision_hits.json`) — mechanism-specific hits already retrieved for
+  this candidate. Treat it as extra candidates for scoop-check Step 2 (Source: collision pool), screened
+  exactly like search results.
+- The scoop-check `SKILL.md` — THE PROCEDURE. Follow its Steps 1–7 in full.
+- The paper-search `SKILL.md` — how to call the search. Its script is
+  `<directory of that SKILL.md>/scripts/search_papers.py`; scoop-check's `fetch_paper.sh` is
+  `<directory of the scoop-check SKILL.md>/scripts/fetch_paper.sh`. Call both by absolute path.
+
+How to map the candidate onto scoop-check's two inputs:
+- **Research problem** = the problem the user posed (intake + user query), stated as scoop-check expects.
+- **Novelty** = the candidate's METHOD: what `core_mechanism` does, the key steps that make it work and
+  the insight in `core_mechanism_reasoning`. Not the title, not the motivation, not the experiment.
+
+Gate-mode adaptations of the scoop-check procedure (everything else is as SKILL.md says):
+1. Do not use TaskCreate and do not write the `step{N}.md` logs: this call writes ONLY result.json; the
+   structured verdict below carries every step's result.
+2. Full-text fetches: run `fetch_paper.sh` with `CLAUDE_PROJECT_DIR=$RUN_DIR/context` so PDFs land in
+   `$RUN_DIR/context/papers/` (shared across cycles — reuse a text that is already there).
+3. Year range for the searches: the last 6 years up to today; the alias channel's older ancestors are
+   already in the collision pool.
+4. Step 5/6 axis judgments are BINARY. Each of the four axes of each deep-dive prior work is exactly
+   `match` or `differ` — resolve every "partial" to one of them. `match` means the prior work's axis is
+   described by the SAME statement as the candidate's axis at the specificity of your Step 1
+   decomposition. For `core_mechanism`, the same technical move (same object, same operator, same role),
+   not merely the same family; a different instance of a family is `differ` with the family named in
+   the evidence. For `key_insight`, the same reason it works.
+5. The gate excuses problem_framing and application_domain when they are a prior work's ONLY matches
+   (the run was asked to solve this problem, so every paper on it matches there). This changes nothing
+   about how you judge those axes — judge all four honestly; the program applies the rule.
+
+Output — ONE envelope with exactly two artifacts:
+
+`phase3_scoop/scoop_verdict.json`:
+{
+  "research_problem": "<the problem as fed to scoop-check>",
+  "novelty_claim": "<the method as fed to scoop-check>",
+  "decomposed_claim": {"problem_framing": "...", "core_mechanism": "...", "key_insight": "...", "application_domain": "..."},
+  "queries": ["<Query 1>", "<Query 2>", "<Query 3>"],
+  "papers_screened": <int: size of the deduplicated Step 3 set>,
+  "prior_works": [            // EVERY Step 4 deep-dive candidate (3-7), closest first
+    {
+      "title": "...", "date": "YYYY-MM", "source": "<URL / arXiv id / DOI>", "venue": "<verified venue or arXiv preprint>",
+      "provenance": "search | model-recall | collision pool",
+      "read": "full_text | abstract_only",          // abstract_only when fetch failed (say why in evidence)
+      "axes": {"problem_framing": "match|differ", "core_mechanism": "match|differ",
+               "key_insight": "match|differ", "application_domain": "match|differ"},
+      "level": <5 - number of matching axes>,
+      "evidence": "<closest passage quote or section reference, and for each match the shared statement>"
+    }
+  ],
+  "overall_level": <minimum level over prior_works>,
+  "closest_prior_work": "<title of the entry with the most matching axes>",
+  "delta": "<the Step 7 one-sentence delta, or the statement that none can be written and which paper blocks it>"
+}
+
+`phase3_scoop/scoop_report.json`:
+{
+  "report_en": "<the COMPLETE scoop-check Report in English — Verdict, Delta, Decomposed claim, Structured papers, Comparison result — exactly as SKILL.md's Report section specifies, as Markdown>",
+  "report_ko": "<the SAME report in Korean, as Markdown: a full translation, not a summary. Paper titles, venues, identifiers, method acronyms and math stay in English; technical terms get the English in parentheses on first use; plain declarative register (-다).>"
+}
+
+The report's Verdict section states scoop-check's own 5-level verdict. Do not state whether the gate
+passed; the program prepends its computed gate line to both reports.
+
+Hard rules:
+- No fabricated papers. A model-recall entry you cannot locate (no fetch, no abstract page) is dropped,
+  not kept on memory alone.
+- `level` must equal 5 minus the matching axes; `overall_level` must equal the minimum. The record step
+  rejects a mismatch and the program recomputes regardless.
+- Every `match` needs its shared statement in `evidence`.
