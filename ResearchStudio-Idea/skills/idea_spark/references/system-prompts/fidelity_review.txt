@@ -4,7 +4,7 @@ Read request inputs: final expansion, canonical candidate, mechanism record, cur
 assessment and implementation issues. Required checks: title_anchor, claims, assumptions,
 operators, evaluation_independence, resources, beginner_readability, bilingual_fidelity.
 
-Compare ordinary English, ordinary Chinese and technical English with the SAME source.
+Compare ordinary English, ordinary Korean and technical English with the SAME source.
 No stronger claims, lost prerequisites, different operators, renamed evaluation objects
 or independent-oracle regressions. Preserve the minimal experiment, metric/direction,
 controls and failure conditions. Titles/hooks name the actual main contribution.
@@ -13,7 +13,7 @@ Certificate/verification/probe words are allowed when accurate.
 Ordinary text serves readers outside this subfield: retain concept explanations,
 input→operation→output and why steps matter. Explain terms on first use, avoid repeated
 definitions, label pedagogical examples. Do not grade by length or research shape.
-Chinese must be idiomatic and preserve claims, assumptions and resource uncertainty.
+Korean must be idiomatic and preserve claims, assumptions and resource uncertainty.
 
 A `fail` blocks only with `executed: true` — an executed instance or a written derivation in the
 evidence; a fail by judgement is recorded as unverified. Conditionals never block.

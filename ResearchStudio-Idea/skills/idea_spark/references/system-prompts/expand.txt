@@ -17,7 +17,7 @@ reviewer's executed checks of the revised mechanism. Never trace from the stale 
 Phase order: technical fill and assembly → implementation audit → at most one
 source-omission repair → technical consistency and current cost review → plain-language
 derivation → fidelity audit → render. This call does not author the ordinary cards.
-All plain_* fields and title_zh remain TODO here.
+All plain_* fields and title_ko remain TODO here.
 
 Your task:
 - Explain and expand existing operations, with their inputs, outputs, assumptions and
@@ -31,7 +31,7 @@ Your task:
   conjecture without a proof is not the same as an undefined computational operation.
 - sub_claims may be []; count is determined by the actual contribution. key_equations
   may be []; if present, equations must describe source operations and name the same
-  assumptions and objects. Include id, linked_step_id, latex, description, description_zh.
+  assumptions and objects. Include id, linked_step_id, latex, description, description_ko.
 - method_flow.steps must include step_id, title, what_changes, why_this_step, input,
   output, linked_component and linked_falsification. Use S1, S2, ... in order.
 - No extra experiment matrix or invented measured results. Preserve the entire committed
@@ -47,7 +47,7 @@ Your task:
 
 The skeleton's hint is the abridged spec. The full schemas live here (derive-owned fields' schemas live in `derive_plain.txt`; `feasibility_validation.compute` is NOT a fill target in v2 — the implementation audit's cost_assessment fills it):
 
-**`method_name`** — short handle for the proposed method, e.g. `'Persistent Baseline GRPO (PB-GRPO)'`; the English acronym is kept verbatim in both the English and Chinese cards.
+**`method_name`** — short handle for the proposed method, e.g. `'Persistent Baseline GRPO (PB-GRPO)'`; the English acronym is kept verbatim in both the English and Korean cards.
 
 **`abstract_draft`** — 150–250 words. Order: problem → bottleneck (cite ≥ 1 Phase 0 paper) → contribution (one sentence) → falsification prediction → expected outcome.
 
@@ -66,7 +66,7 @@ The skeleton's hint is the abridged spec. The full schemas live here (derive-own
 
 **`sub_claims`** — list of `{id: "c1", statement: "...", supports_which_aspect: "<conceptual reference to a specific aspect of the bottleneck this sub-claim closes>"}`. 2–4 entries.
 
-**`key_equations`** — list of `{id, linked_step_id, latex, description, description_zh}`. 3–6 typical; emit `[]` for pure-prose candidates. `linked_step_id` MUST match an existing `method_flow.steps[].step_id`. `latex` is raw LaTeX math body (no `$`/environment wrapper, no ASCII stand-ins — use `\kappa`, `\bar{R}_q`, etc.). `description` (English) and `description_zh` (idiomatic Chinese, not literal) are plain text — any inline math symbol uses Unicode glyphs (σ, κ, ²), identifiers stay English.
+**`key_equations`** — list of `{id, linked_step_id, latex, description, description_ko}`. 3–6 typical; emit `[]` for pure-prose candidates. `linked_step_id` MUST match an existing `method_flow.steps[].step_id`. `latex` is raw LaTeX math body (no `$`/environment wrapper, no ASCII stand-ins — use `\kappa`, `\bar{R}_q`, etc.). `description` (English) and `description_ko` (idiomatic Korean, not literal) are plain text — any inline math symbol uses Unicode glyphs (σ, κ, ²), identifiers stay English.
 
 **`method_flow.high_level_pipeline`** — 3–5 sentences narrating the method end-to-end as a story.
 

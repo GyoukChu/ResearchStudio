@@ -17,7 +17,7 @@ from pathlib import Path
 VERSION = 2
 MECHANISM_FIELDS = ('core_mechanism', 'core_mechanism_reasoning', 'core_mechanism_steps',
                     'gap_closure', 'falsification_prediction')
-CARDS = ('idea.std.zh.md', 'idea.std.en.md', 'idea.detail.en.md')
+CARDS = ('idea.std.en.md', 'idea.std.ko.md', 'idea.detail.en.md')
 
 
 def read(path, default=None):
@@ -177,16 +177,16 @@ def assemble_parts(sd, req):
 
 
 def record_findings(run, stage, payloads):
-    """Rules the author can satisfy in the result itself. plain_derive: the Chinese word-order rule
+    """Rules the author can satisfy in the result itself. plain_derive: the Korean sentence-shape rule
     (a rule, not a request — checked before commit, so the fix is a field edit and not a re-render).
     generation: every Phase 1 collateral family is either queried by an alias term or named in
     composition_note as unreachable (the audit weighs the reason; silence was the measured failure)."""
-    from scripts.validators.chinese_word_order import chinese_word_order_findings
+    from scripts.validators.korean_sentence_shape import korean_sentence_shape_findings
     from scripts.validators.alias_collateral_coverage import unjustified_collateral
     out = []
     if stage == 'plain_derive':
         for payload in payloads.values():
-            out += [f for f in chinese_word_order_findings(payload) if f.get('severity') in ('warn', 'fail')]
+            out += [f for f in korean_sentence_shape_findings(payload) if f.get('severity') in ('warn', 'fail')]
     if stage == 'generation':
         p1 = read(run / PHASE1, {})
         for rel, payload in payloads.items():
@@ -900,7 +900,7 @@ def coherence_findings(report):
 
 def finalize_expansion(technical, derive, cost, impl, repairs=None):
     out = copy.deepcopy(technical)
-    allowed = {k for k in technical if k.startswith('plain_') or k == 'title_zh'}
+    allowed = {k for k in technical if k.startswith('plain_') or k == 'title_ko'}
     if set(derive) - allowed:
         raise ValueError('Plain derivation attempted to modify a technical field')
     out.update(derive)

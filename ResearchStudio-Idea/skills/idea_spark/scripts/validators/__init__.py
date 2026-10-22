@@ -23,10 +23,10 @@ Validators:
                             ship. Version 2 has no incomplete-output publication override.
   implementability_completeness — Phase 4.1.5 implementability audit covers every method step
                             (enriched_steps[] one-per-step, same ids/order, each with what_changes +
-                            what_to_do_en/zh), records underspecified_points[], and carries no
+                            what_to_do_en/ko), records underspecified_points[], and carries no
                             kill-switch field. Hard fail on coverage gap or bounded-contract breach.
   implementability_readability — Phase 4.1.5 std-register fields avoid the known readability regressions
-                            (no "占位/placeholder" leak; no bare English jargon word in Chinese prose).
+                            (no "자리표시자/placeholder" leak; no bare English jargon word in Korean prose).
                             Warn — surfaces a slip past Hard rule 8 without blocking ship.
 
 Usage:
@@ -44,7 +44,7 @@ from .implementability_readability import validate_implementability_readability
 from .threat_grounding import validate_threat_grounding
 from .alias_collateral_coverage import validate_alias_collateral_coverage
 from .user_direction import validate_user_direction
-from .chinese_word_order import validate_chinese_word_order
+from .korean_sentence_shape import validate_korean_sentence_shape
 from .motivation_opener import validate_motivation_opener
 
 
@@ -75,7 +75,7 @@ def run_all_validators(phase2_path=None, phase3_path=None, phase4_path=None, pha
 
     if phase4_path:
         findings.extend(validate_expansion_completeness(phase4_path))
-        findings.extend(validate_chinese_word_order(phase4_path))
+        findings.extend(validate_korean_sentence_shape(phase4_path))
         findings.extend(validate_motivation_opener(phase4_path))
 
     if phase4_path and phase4_impl_path:

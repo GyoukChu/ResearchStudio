@@ -920,7 +920,7 @@ def cmd_phase0(args) -> int:
     # salience in the fulltext-pool ranking and closest_adjacent scanning). Skipped
     # when the user's query itself asks for surveys.
     try:
-        if not re.search(r'survey|review|综述', (args.query or ''), re.I):
+        if not re.search(r'survey|review|서베이|리뷰|综述', (args.query or ''), re.I):
             merged = json.loads(merged_out.read_text())
             papers_list = merged['papers'] if isinstance(merged, dict) and 'papers' in merged else merged
             is_survey = lambda p: bool(re.search(

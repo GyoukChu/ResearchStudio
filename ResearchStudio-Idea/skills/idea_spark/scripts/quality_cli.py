@@ -156,7 +156,7 @@ def materialize(d, root, operation, findings_json=None):
         # Final assessment is made AFTER implementation audit, never inferred from the old estimate.
         skeleton['feasibility_validation']['compute'] = {'verdict': 'unknown',
             'rationale': 'Awaiting current-version resource assessment'}
-        for lang in ('en', 'zh'):
+        for lang in ('en', 'ko'):
             for key, hint in [('plain_falsification', 'same experiment, metric, controls and failure conditions'),
                               ('plain_core_claim', 'main contribution explained without changing its strength'),
                               ('plain_resource_summary', 'current cost, user ceiling, uncertainty and feasibility'),
@@ -175,10 +175,10 @@ def materialize(d, root, operation, findings_json=None):
     elif operation == 'technical':
         require(d, 'skeleton', 'technical_fill')
         fill = read(d / 'phase4/work/fill_map.json')
-        if any(k.startswith('plain_') or k == 'title_zh' for k in fill):
+        if any(k.startswith('plain_') or k == 'title_ko' for k in fill):
             raise ValueError('Technical fill cannot author plain-language fields')
         technical = assemble_expansion(read(d / SKEL), fill)
-        plain_free = {k: v for k, v in technical.items() if not k.startswith('plain_') and k != 'title_zh'}
+        plain_free = {k: v for k, v in technical.items() if not k.startswith('plain_') and k != 'title_ko'}
         if '<TODO[' in json.dumps(plain_free):
             raise ValueError('Technical TODOs remain')
         atomic_json(d / TECH, technical)

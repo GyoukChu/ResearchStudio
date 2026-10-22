@@ -28,7 +28,7 @@ re-seal artifacts or issue model/network calls. Phase 0/1 retain their retrieval
 | quality_retry | audited abandon/redesign only; archives failed attempt recoverably; reuses information-gain and cycle caps |
 | quality_publish | re-evaluates all gates, then validators, then rendering; --no-pdf records skipped status |
 
-Phase 4 layout: `phase4/` holds only the deliverables (idea.std.en/zh .md and .pdf,
+Phase 4 layout: `phase4/` holds only the deliverables (idea.std.en/ko .md and .pdf,
 idea.detail.en.md). Every intermediate — skeleton, mechanism_record, fill_map,
 technical_expansion, implementability, technical_repairs, repaired_technical, technical_review,
 cost_assessment(_revised), derive_map, phase4_expansion, fidelity files, render_status, and the
@@ -43,7 +43,7 @@ author twice; four smaller writes did not). (2) `quality_record` REJECTS a resul
 the author can fix in the result itself, without a needs_work: the request stays open, `next`
 re-emits the same step with the findings, and the fixed result is recorded against the same
 request_id. The third result on one request is committed with the findings kept as warns. Rules:
-plain_derive — the Chinese word-order rule (no more than 18 characters before 的 without a break);
+plain_derive — the Korean sentence-shape rule (no Korean run past 90 characters without a break, plain -다 register);
 generation — every Phase 1 collateral family is queried by an alias term or named in
 `composition_note` as unreachable.
 
@@ -362,7 +362,7 @@ label is only compared against it. Computed infeasible blocks publication; unkno
 not fixed by changing the method or ceiling. Technical consistency includes cost impact.
 
 Final order: technical → implementation audit (report + cost_assessment.json in ONE call) →
-bounded source repair, and only then a technical review of the repaired text → ordinary EN/ZH
+bounded source repair, and only then a technical review of the repaired text → ordinary EN/KO
 derivation → (fidelity, when enabled) → shared-source rendering. A run with no source omission spends no
 technical-review call: the archive's median run is ~65 min against a 120 min wall and every
 reasoning-tier call costs ~10 min. Plain maps cannot

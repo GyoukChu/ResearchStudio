@@ -212,7 +212,7 @@ def _extract_gpu_days(s: str) -> float | None:
             if before.isalpha() or after.isalpha():
                 continue          # cluster02 / a40 / pro6000 / 6000ada / l40
             if not re.match(r'\s*(gpu[-\s]?)?(day|hour)', s[m2.end():], re.I):
-                continue          # 「budget 12 , mostly inference」不是 12 GPU-day
+                continue          # 'budget 12 , mostly inference' is not 12 GPU-days
             return float(m2.group(1))
         return None
     n = float(m.group(1))
@@ -603,7 +603,7 @@ def build_skeleton(candidate: dict, phase1: dict, phase2_select: dict,
     skeleton = {
         # Top-level mechanical echoes
         'title': candidate.get('title', TODO('title', 'final paper title')),
-        'title_zh': TODO('title_zh', 'Chinese translation; keep proper nouns and method acronyms in English'),
+        'title_ko': TODO('title_ko', 'Korean translation; keep proper nouns and method acronyms in English'),
         'method_name': TODO('method_name',
                             "short handle for the proposed method, e.g. 'Persistent Baseline GRPO (PB-GRPO)'"),
         'hook': candidate.get('hook', TODO('hook', 'echoed from candidate, possibly tightened')),
@@ -634,7 +634,7 @@ def build_skeleton(candidate: dict, phase1: dict, phase2_select: dict,
 
         # Equations — optional; LLM emits empty list or 3-6 entries
         'key_equations': TODO('key_equations',
-                              'optional 3-6 equations; each {id, linked_step_id, latex, description, description_zh}. '
+                              'optional 3-6 equations; each {id, linked_step_id, latex, description, description_ko}. '
                               'Emit [] (literal empty list) for a pure-prose candidate.'),
 
         # Method flow — prose TODO; the LLM derives from candidate.core_mechanism_steps
@@ -656,18 +656,18 @@ def build_skeleton(candidate: dict, phase1: dict, phase2_select: dict,
                                     'plain-language English rendering of motivation for a reader outside this subfield. '
                                     'Simplify LANGUAGE only — never drop the load-bearing mechanism. '
                                     'Spell out every abbreviation on first use.'),
-        'plain_motivation_zh': TODO('plain_motivation_zh',
-                                    'Chinese 普通版 counterpart. Same content; keep identifiers/symbols/acronyms in English.'),
+        'plain_motivation_ko': TODO('plain_motivation_ko',
+                                    'Korean plain-register counterpart. Same content; keep identifiers/symbols/acronyms in English.'),
         'plain_method_steps_en': TODO('plain_method_steps_en',
                                        'list of {step_id, what_to_do, why_this_makes_sense}; '
                                        'SAME step_ids and SAME order as method_flow.steps.'),
-        'plain_method_steps_zh': TODO('plain_method_steps_zh',
-                                       'Chinese 普通版 counterpart; English for identifiers/symbols/acronyms.'),
+        'plain_method_steps_ko': TODO('plain_method_steps_ko',
+                                       'Korean plain-register counterpart; English for identifiers/symbols/acronyms.'),
         'plain_method_modules_en': TODO('plain_method_modules_en',
                                          'group the CONTRIBUTION steps into named modules; '
                                          'list of {module_id, purpose_oneline, step_ids}.'),
-        'plain_method_modules_zh': TODO('plain_method_modules_zh',
-                                         'Chinese 普通版 counterpart.'),
+        'plain_method_modules_ko': TODO('plain_method_modules_ko',
+                                         'Korean plain-register counterpart.'),
 
         # KILL-SWITCH echoes — DETERMINISTIC, byte-identical to candidate
         'falsification_prediction': candidate.get('falsification_prediction', ''),

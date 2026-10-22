@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-ENRICHED_FIELDS = ["step_id", "what_changes", "what_to_do_en", "what_to_do_zh"]
+ENRICHED_FIELDS = ["step_id", "what_changes", "what_to_do_en", "what_to_do_ko"]
 KILL_SWITCH_FIELDS = ["falsification_prediction", "compute_budget"]
 
 

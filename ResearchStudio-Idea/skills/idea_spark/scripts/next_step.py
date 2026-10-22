@@ -161,12 +161,12 @@ def _retrieval_next_step(run_dir: Path, root: Path, query: str | None = None, em
                      'Surface phase_3_failed.md to the user', 'terminal',
                      notes=f'Return {d}/phase_3_failed.md contents as the final response.',
                      then=False)
-    cards = [d / 'phase4' / n for n in ('idea.std.zh.md', 'idea.std.en.md', 'idea.detail.en.md')]
+    cards = [d / 'phase4' / n for n in ('idea.std.en.md', 'idea.std.ko.md', 'idea.detail.en.md')]
     if all(c.exists() for c in cards):
         return _emit('DONE — all three idea cards rendered.',
                      'Return the cards inline', 'terminal',
                      notes='Read all three files and return them as the final response under '
-                           'headings 中文版 / English / Reviewer version: '
+                           'headings English (main) / 한국어 / Reviewer version: '
                            + ', '.join(str(c) for c in cards), then=False)
 
     p0 = d / 'phase0'
@@ -260,7 +260,7 @@ def _retrieval_next_step(run_dir: Path, root: Path, query: str | None = None, em
                            'slices, mechanically concatenated in input order; verify total row '
                            'count == paper count before accepting). Routing signal: none (just the file).',
                      run_dir=d)
-    # ---- Phase 0.5 coverage check (host-recall补充通道) --------------------------
+    # ---- Phase 0.5 coverage check (host-recall supplementary channel) --------------------------
     # After tagging and before fulltext: the host, having read the whole table,
     # names load-bearing work the retrieval pool obviously missed; add_host_refs
     # VERIFIES each via a connector (hallucinations rejected) and merges the real

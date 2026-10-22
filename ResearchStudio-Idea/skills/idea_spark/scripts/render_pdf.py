@@ -6,14 +6,14 @@ record (motivation / method / claims / falsification / feasibility / literature)
 Motivation + Method**; the detail card adds the research boundary (status, main contribution,
 falsification, resources, open questions). Two registers × the languages each register ships:
 
-  普通版 (std / plain register)      — 英文 + 中文   → .md, .pdf each (.tex under work/)
-  详细版 (detail / detailed register) — 英文 only      → .md
+  std (plain register)      — English + Korean → .md, .pdf each (.tex under work/)
+  detail (detailed register) — English only     → .md
 
 So this script emits 5 deliverables in `out` (no model call — pure templating) and keeps every
 build file (.tex, .aux, .log, .pdf.error.txt) in `out/work/`:
 
   idea.std.en.md   idea.std.en.pdf
-  idea.std.zh.md   idea.std.zh.pdf
+  idea.std.ko.md   idea.std.ko.pdf
   idea.detail.en.md
 
 Method in every card = module buckets (steps not claimed by any module fall into a leading
@@ -36,15 +36,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-BACKGROUND_LABEL = {'en': 'Background', 'zh': '背景'}
+BACKGROUND_LABEL = {'en': 'Background', 'ko': '배경'}
 
-# Fixed structural labels are localized per language (the 普通版中文 card should read as Chinese);
+# Fixed structural labels are localized per language (the Korean plain card should read as Korean);
 # only identifiers / symbols / acronyms stay English, handled in the content fields themselves.
 LABELS = {
     'en': {'motivation': 'Motivation', 'method': 'Method', 'method_name': 'Method',
            'why': 'Why', 'equations': 'Key equations', 'label_sep': '.', 'colon': ':'},
-    'zh': {'motivation': '研究动机', 'method': '方法', 'method_name': '方法名称',
-           'why': '为什么', 'equations': '关键公式', 'label_sep': '：', 'colon': '：'},
+    'ko': {'motivation': '연구 동기', 'method': '방법', 'method_name': '방법 이름',
+           'why': '왜 필요한가', 'equations': '핵심 수식', 'label_sep': ':', 'colon': ':'},
 }
 
 # ----------------------------------------------------------------------------- LaTeX escaping
@@ -127,8 +127,9 @@ _COMBINING = [('̄', r'\bar'), ('̃', r'\tilde'), ('̂', r'\hat'),
               ('́', r'\acute'), ('̀', r'\grave'), ('̇', r'\dot'),
               ('̆', r'\breve'), ('̌', r'\check'), ('⃗', r'\vec')]
 
-_CJK_RANGES = ((0x3000, 0x303F), (0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xF900, 0xFAFF),
-               (0xFE30, 0xFE4F), (0xFF00, 0xFFEF))
+_CJK_RANGES = ((0x1100, 0x11FF), (0x3000, 0x303F), (0x3130, 0x318F), (0x3400, 0x4DBF), (0x4E00, 0x9FFF),
+               (0xA960, 0xA97F), (0xAC00, 0xD7AF), (0xD7B0, 0xD7FF), (0xF900, 0xFAFF),
+               (0xFE30, 0xFE4F), (0xFF00, 0xFFEF))   # Hangul (Jamo, compatibility Jamo, syllables) included
 
 
 def _is_cjk(ch) -> bool:
@@ -333,9 +334,9 @@ def _module_header(m: dict) -> str:
 
 def _is_background_header(h: str) -> bool:
     """True for the scaffolding module — the unchanged-setup part of the method. Author modules
-    name it 'Background' / '背景脚手架'; we match loosely so the renderer can float it to the front."""
+    name it 'Background' / '배경'; we match loosely so the renderer can float it to the front."""
     h = (h or '').lower()
-    return 'background' in h or 'scaffold' in h or '背景' in h or '脚手架' in h
+    return 'background' in h or 'scaffold' in h or '배경' in h or '背景' in h
 
 
 def _bucket(steps: list, modules: list, lang: str) -> list:
@@ -373,7 +374,7 @@ def _card_inputs(d: dict, register: str, lang: str) -> dict:
     """Pick the title / motivation / steps / modules source for a (register, lang) card."""
     if register == 'std':
         return {
-            'title': d.get('title_zh' if lang == 'zh' else 'title', ''),
+            'title': d.get('title_ko' if lang == 'ko' else 'title', ''),
             'steps': d.get(f'plain_method_steps_{lang}') or [],
             'modules': d.get(f'plain_method_modules_{lang}') or [],
         }
@@ -409,21 +410,21 @@ def _equations_by_step(d: dict) -> tuple:
 
 
 def _eq_desc(e: dict, lang: str) -> str:
-    """Equation caption in the card's language. zh is an idiomatic rendering (description_zh),
+    """Equation caption in the card's language. ko is an idiomatic rendering (description_ko),
     not a literal translation of the English; fall back to English if absent."""
-    if lang == 'zh':
-        return e.get('description_zh') or e.get('description', '')
+    if lang == 'ko':
+        return e.get('description_ko') or e.get('description', '')
     return e.get('description', '')
 
 
 def _step_brief(s: dict, lang: str) -> str:
     """A short locator label for a step — its first clause, capped — so a cross-reference can read
-    '第5步（用 LoRA 微调生成器）' instead of a bare number the reader must hunt for across modules."""
+    '5단계(LoRA로 생성기 미세조정)' instead of a bare number the reader must hunt for across modules."""
     txt = (s.get('what_to_do') or s.get('title') or '').strip()
     if not txt:
         return ''
     head = re.split(r'[，。；：（、,.;:(]', txt, 1)[0].strip()
-    limit = 14 if lang == 'zh' else 36
+    limit = 20 if lang == 'ko' else 36
     if len(head) > limit:
         cut = head[:limit]
         sp = cut.rfind(' ')
@@ -450,7 +451,7 @@ def _step_number_map(buckets: list, lang: str) -> dict:
 
 def _deref_step_ids(text, idmap: dict, lang: str):
     """Rewrite internal step ids (S3, S7, …) in prose to the visible number + hint
-    ('第N步（…）' / 'step N (…)'). No-op when idmap is empty (the pro card surfaces the S-ids verbatim)."""
+    ('N단계(…)' / 'step N (…)'). No-op when idmap is empty (the pro card surfaces the S-ids verbatim)."""
     if not text or not idmap:
         return text
 
@@ -459,8 +460,8 @@ def _deref_step_ids(text, idmap: dict, lang: str):
         if not ref:
             return mm.group(0)
         n, brief = ref
-        if lang == 'zh':
-            return f'第{n}步（{brief}）' if brief else f'第{n}步'
+        if lang == 'ko':
+            return f'{n}단계({brief})' if brief else f'{n}단계'
         return f'step {n} ({brief})' if brief else f'step {n}'
 
     return re.sub(r'(?<![A-Za-z0-9])S\d+(?![A-Za-z0-9])', repl, str(text))
@@ -503,11 +504,11 @@ def delivery_sections(d, register, lang):
     """
     if d.get('contract_version') != 2 or register == 'std':
         return []
-    zh = lang == 'zh'
+    ko = lang == 'ko'
     plain = register == 'std'
     cost = d.get('cost_assessment') or {}
     if cost:
-        labels = (('原始估算', '当前估算', '用户上限', '状态', '变化') if zh else
+        labels = (('최초 추정', '현재 추정', '사용자 상한', '상태', '변경 사유') if ko else
                   ('Original estimate', 'Current estimate', 'User ceiling', 'Status', 'Change'))
         budget = '\n\n'.join([
             f"{labels[0]}: {cost.get('original_estimate', '')}",
@@ -516,21 +517,21 @@ def delivery_sections(d, register, lang):
             f"{labels[3]}: {cost.get('status', 'unknown')}. {cost.get('basis', '')}",
             f"{labels[4]}: {cost.get('change_reason', '')}"])
     else:
-        budget = str(d.get('compute_budget', '未评估' if zh else 'Not assessed'))
+        budget = str(d.get('compute_budget', '평가되지 않음' if ko else 'Not assessed'))
     notes = d.get('implementation_notes') or []
     unresolved = '\n\n'.join(str(n.get('hole', '')) + ': ' + str(n.get('evidence', '')) for n in notes)
-    unresolved = unresolved or ('未记录额外的实现选择；经验性主张尚未验证。' if zh else
+    unresolved = unresolved or ('추가로 기록된 구현 선택은 없다. 경험적 주장은 아직 검증되지 않았다.' if ko else
                                 'No additional implementation choices recorded; empirical claims remain untested.')
-    status = ('研究状态' if zh else 'Research status',
-              '研究提案，尚未经真实实验验证。流程检查不等于新颖性或数学正确性的证明。' if zh else
+    status = ('연구 상태' if ko else 'Research status',
+              '연구 제안이며 실제 실험으로 검증되지 않았다. 파이프라인 검사는 새로움이나 수학적 정확성을 증명하지 않는다.' if ko else
               'Research proposal — not experimentally validated. Pipeline checks do not prove novelty or mathematical correctness.')
     if str(d.get('proposal_status') or '').startswith('FAILED VALIDATION'):
         status = (status[0], str(d['proposal_status']) + '\n\n' + '\n\n'.join('- ' + x for x in (d.get('validation_failures') or [])))
     technical = [
-        ('主要贡献' if zh else 'Main contribution', 'plain_core_claim', d.get('core_claim') or d.get('hook', '')),
-        ('最小证伪设计' if zh else 'Minimal falsification', 'plain_falsification', d.get('falsification_prediction', '')),
-        ('资源与可行性' if zh else 'Resources and feasibility', 'plain_resource_summary', budget),
-        ('未解决事项' if zh else 'Open questions', 'plain_open_questions', unresolved),
+        ('주요 기여' if ko else 'Main contribution', 'plain_core_claim', d.get('core_claim') or d.get('hook', '')),
+        ('최소 반증 설계' if ko else 'Minimal falsification', 'plain_falsification', d.get('falsification_prediction', '')),
+        ('자원과 실현 가능성' if ko else 'Resources and feasibility', 'plain_resource_summary', budget),
+        ('미해결 사항' if ko else 'Open questions', 'plain_open_questions', unresolved),
     ]
     out = [status]
     for title, key, fallback in technical:
@@ -555,8 +556,8 @@ def render_card_md(d: dict, register: str, lang: str) -> str:
     status = str(d.get('proposal_status') or '')
     if status.startswith('FAILED VALIDATION'):
         # A card the pipeline's own validation refused says so on its first lines, in every register.
-        parts += [f'**{"状态" if lang == "zh" else "Status"}{lab["label_sep"]}** '
-                  f'{"未通过验证。" if lang == "zh" else ""}{status}', '']
+        parts += [f'**{"상태" if lang == "ko" else "Status"}{lab["label_sep"]}** '
+                  f'{"검증 실패. " if lang == "ko" else ""}{status}', '']
 
     parts.append(f'## {lab["motivation"]}')
     parts += _md_motivation(d, register, lang)
@@ -651,13 +652,16 @@ LATEX_PREAMBLE = r"""\documentclass[10pt,a4paper]{article}
 % Walk a cross-platform priority list and use the first font that exists; AutoFakeBold
 % + AutoFakeSlant give bold/italic CJK even on faces that ship no bold/italic cut.
 \newcommand{\setCJKto}[1]{\setCJKmainfont{#1}[AutoFakeBold=true,AutoFakeSlant=0.2]}
-\IfFontExistsTF{Noto Sans CJK SC}{\setCJKto{Noto Sans CJK SC}}{%        % Linux (fonts-noto-cjk); cross-platform if installed
- \IfFontExistsTF{Source Han Sans SC}{\setCJKto{Source Han Sans SC}}{%   % Adobe 思源黑体; cross-platform
-  \IfFontExistsTF{PingFang SC}{\setCJKto{PingFang SC}}{%               % macOS 10.11+
-   \IfFontExistsTF{Hiragino Sans GB}{\setCJKto{Hiragino Sans GB}}{%    % older macOS
-    \IfFontExistsTF{Microsoft YaHei}{\setCJKto{Microsoft YaHei}}{%     % Windows
-     \IfFontExistsTF{WenQuanYi Micro Hei}{\setCJKto{WenQuanYi Micro Hei}}{% % older Linux
-      \setCJKto{Songti SC}}}}}}}                                       % macOS bottom fallback
+% Korean faces first (the plain card is Korean); every Noto/Source Han CJK face carries Hangul.
+\IfFontExistsTF{Noto Sans CJK KR}{\setCJKto{Noto Sans CJK KR}}{%        % Linux (fonts-noto-cjk); cross-platform if installed
+ \IfFontExistsTF{Source Han Sans KR}{\setCJKto{Source Han Sans KR}}{%   % Adobe Source Han; cross-platform
+  \IfFontExistsTF{Apple SD Gothic Neo}{\setCJKto{Apple SD Gothic Neo}}{% % macOS
+   \IfFontExistsTF{Malgun Gothic}{\setCJKto{Malgun Gothic}}{%          % Windows
+    \IfFontExistsTF{NanumGothic}{\setCJKto{NanumGothic}}{%             % Linux (fonts-nanum)
+     \IfFontExistsTF{Noto Sans CJK SC}{\setCJKto{Noto Sans CJK SC}}{%  % any Noto CJK face has Hangul
+      \setCJKto{AppleGothic}}}}}}}                                     % older macOS bottom fallback
+% Korean separates words with spaces; xeCJK drops spaces between CJK characters by default.
+\xeCJKsetup{CJKspace=true}
 \definecolor{cblue}{HTML}{4C72B0}
 \setlength{\parskip}{3pt}\setlength{\parindent}{0pt}
 \setlist[enumerate]{topsep=2pt,itemsep=2pt,parsep=1pt,partopsep=0pt}
@@ -776,8 +780,8 @@ def render_card_latex(d: dict, register: str, lang: str) -> str:
         out.append(rf'\textbf{{{latex_escape(lab["method_name"] + lab["label_sep"])}}} {latex_escape(method_name)}')
     status = str(d.get('proposal_status') or '')
     if status.startswith('FAILED VALIDATION'):
-        out.append(rf'\par\textbf{{{latex_escape(("状态" if lang == "zh" else "Status") + lab["label_sep"])}}} '
-                   rf'{latex_escape(("未通过验证。" if lang == "zh" else "") + status)}')
+        out.append(rf'\par\textbf{{{latex_escape(("상태" if lang == "ko" else "Status") + lab["label_sep"])}}} '
+                   rf'{latex_escape(("검증 실패. " if lang == "ko" else "") + status)}')
 
     out.append(rf'\section*{{{latex_escape(lab["motivation"])}}}')
     out += _tex_motivation(d, register, lang)
@@ -940,7 +944,7 @@ def render_one(expansion: dict, out_dir: Path, compile_pdfs: bool = True, work_d
 
     # std register ships both languages; detail register ships English markdown only.
     std_md_path = None
-    for lang in ('en', 'zh'):
+    for lang in ('en', 'ko'):
         md_path = out_dir / f'idea.std.{lang}.md'
         tex_path = work_dir / f'idea.std.{lang}.tex'
         md_path.write_text(render_card_md(expansion, 'std', lang))

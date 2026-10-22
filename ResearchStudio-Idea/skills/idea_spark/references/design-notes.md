@@ -277,7 +277,7 @@ distinguishes omitted source information, unvalidated implementation defaults an
 undefined core operations. Only source omissions receive one bounded correction.
 Technical consistency/cost review comes before ordinary-language derivation.
 
-Ordinary English and Chinese serve non-specialists: explain necessary terms once,
+Ordinary English and Korean serve non-specialists: explain necessary terms once,
 keep step purposes and label pedagogical examples. Detailed English retains assumptions,
 proof obligations, implementation choices and reviewer risks. All cards expose the
 main contribution, minimal falsification, resources, open questions and proposal status.

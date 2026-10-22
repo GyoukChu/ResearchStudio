@@ -12,7 +12,7 @@ description: >-
 
 Generate one literature-grounded research proposal with a concrete mechanism and honest
 falsification plan. A completed proposal is NOT evidence that the method works, is novel,
-or that a theorem is proved. Ordinary Chinese and English serve readers outside the subfield;
+or that a theorem is proved. Ordinary English (main) and Korean serve readers outside the subfield;
 the detailed English card retains technical obligations and implementation choices.
 
 One run is one fresh directory: `next` writes a `run_contract.json` into an empty directory and
@@ -104,7 +104,7 @@ Ordinary text keeps necessary explanations and why each step matters; there is n
 word cap. Explain terms on first use, remove repetition and label pedagogical examples.
 The std cards carry Title, Motivation and Method only, with one readable heading per method
 module; the detail card adds main contribution, minimal falsification, resources and open
-questions. Output names remain idea.std.zh.md, idea.std.en.md and idea.detail.en.md (plus the
+questions. Output names are idea.std.en.md (main), idea.std.ko.md and idea.detail.en.md (plus the
 PDFs when available) in phase4/; every intermediate and build file is under phase4/work/.
 Report missing/unverified PDF rendering honestly.
 

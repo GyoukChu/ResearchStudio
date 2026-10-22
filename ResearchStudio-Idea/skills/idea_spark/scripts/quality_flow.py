@@ -458,7 +458,7 @@ def late_flow(d, root, failed=False):
     fill = spec(d, root, 'technical_fill', [SKEL, selected, 'phase4/work/mechanism_record.json', P1, CRIT,
                 'phase0/lit_table.md'] + ([prior] if (d / prior).exists() else []),
                 ['phase4/work/fill_map.json'], ['expand.txt'],
-                'Technical TODO fields only. Do not fill plain_* or title_zh. No new scientific facts.' +
+                'Technical TODO fields only. Do not fill plain_* or title_ko. No new scientific facts.' +
                 (' ' + prior + ' is the technical text written for this candidate BEFORE its falsification revision: '
                  'keep everything the revision did not touch; change only what the new falsification requires.'
                  if (d / prior).exists() else ''))

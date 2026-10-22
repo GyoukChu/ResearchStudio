@@ -19,7 +19,7 @@ from pathlib import Path
 
 REQUIRED_TOP_LEVEL = [
     "title",
-    "title_zh",                  # Chinese title for the 中文 cards (acronyms stay English)
+    "title_ko",                  # Korean title for the 한국어 cards (acronyms stay English)
     "method_name",               # short method handle, e.g. 'Persistent Baseline GRPO (PB-GRPO)'
     "hook",
     "abstract_draft",
@@ -27,12 +27,12 @@ REQUIRED_TOP_LEVEL = [
     "core_claim",
     "sub_claims",
     "method_flow",
-    "plain_motivation_en",       # 普通版 English motivation (rendered deliverable)
-    "plain_motivation_zh",       # 普通版 Chinese motivation
-    "plain_method_steps_en",     # 普通版 per-step rendering (mirrors method_flow.steps)
-    "plain_method_steps_zh",
+    "plain_motivation_en",       # plain-register English motivation (rendered deliverable)
+    "plain_motivation_ko",       # plain-register Korean motivation
+    "plain_method_steps_en",     # plain-register per-step rendering (mirrors method_flow.steps)
+    "plain_method_steps_ko",
     "plain_method_modules_en",   # module buckets over the plain steps
-    "plain_method_modules_zh",
+    "plain_method_modules_ko",
     "falsification_prediction",  # paragraph (new flat schema)
     "compute_budget",            # flat (new schema; was nested under falsification_prediction)
     "almost_prior_paper_id",     # flat (new schema; was R0_case.almost_prior.paper_id)
@@ -59,8 +59,8 @@ PLAIN_MODULE_FIELDS = ["module_id", "purpose_oneline", "step_ids"]
 MODULE_TITLE = "module_title"     # the card heading; warn-level so pre-title derivations still render
 
 # Equations render inline under the method step they explain (linked_step_id), with a bilingual
-# caption (description = English, description_zh = idiomatic Chinese for the 中文 card).
-EQUATION_FIELDS = ["id", "latex", "description", "description_zh", "linked_step_id"]
+# caption (description = English, description_ko = idiomatic Korean for the 한국어 card).
+EQUATION_FIELDS = ["id", "latex", "description", "description_ko", "linked_step_id"]
 
 
 def _is_empty(v) -> bool:
@@ -79,7 +79,7 @@ def validate_expansion_completeness(phase4_path: str) -> list[dict]:
     missing_top = [f for f in REQUIRED_TOP_LEVEL if f not in optional_empty and _is_empty(p4.get(f))]
     if p4.get('contract_version') == 2:
         missing_top += [f'plain_{k}_{lang}' for k in ('core_claim', 'falsification', 'resource_summary', 'open_questions')
-                        for lang in ('en', 'zh') if _is_empty(p4.get(f'plain_{k}_{lang}'))]
+                        for lang in ('en', 'ko') if _is_empty(p4.get(f'plain_{k}_{lang}'))]
     if missing_top:
         findings.append({
             "severity": "fail", "validator": "expansion_completeness",
@@ -129,11 +129,11 @@ def validate_expansion_completeness(phase4_path: str) -> list[dict]:
                     "message": f"method_flow.steps[{i}] missing fields: {missing_step}.",
                 })
 
-    # 3b. plain_method_steps_{en,zh} must mirror method_flow.steps (same step_ids, same order)
-    #     and carry the plain sub-fields. The 普通版 cards render directly from these, so any
+    # 3b. plain_method_steps_{en,ko} must mirror method_flow.steps (same step_ids, same order)
+    #     and carry the plain sub-fields. The plain-register cards render directly from these, so any
     #     drift from method_flow silently desyncs the deliverable from the audited method.
     step_ids = [(s or {}).get("step_id") for s in steps] if isinstance(steps, list) else []
-    for lang in ("en", "zh"):
+    for lang in ("en", "ko"):
         plain_steps = p4.get(f"plain_method_steps_{lang}") or []
         if not isinstance(plain_steps, list) or len(plain_steps) == 0:
             findings.append({
@@ -155,9 +155,9 @@ def validate_expansion_completeness(phase4_path: str) -> list[dict]:
                     "message": f"plain_method_steps_{lang}[{i}] missing fields: {missing}.",
                 })
 
-    # 3c. plain_method_modules_{en,zh} buckets must carry their sub-fields and reference known step_ids
+    # 3c. plain_method_modules_{en,ko} buckets must carry their sub-fields and reference known step_ids
     known_ids = set(filter(None, step_ids))
-    for lang in ("en", "zh"):
+    for lang in ("en", "ko"):
         modules = p4.get(f"plain_method_modules_{lang}") or []
         if not isinstance(modules, list) or len(modules) == 0:
             findings.append({

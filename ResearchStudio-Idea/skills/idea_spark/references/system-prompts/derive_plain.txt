@@ -1,6 +1,6 @@
 # Phase 4.derive — plain-register derivation (mechanical; fast-tier)
 
-You derive the plain-language (普通版) fields of the Phase 4 expansion from its ALREADY-WRITTEN
+You derive the plain-language (std register) fields of the Phase 4 expansion from its ALREADY-WRITTEN
 technical fields. This is register transformation and translation, NOT authoring: every statement
 you write must be derivable from a technical field that already exists in the expansion. You add
 no new facts, no new mechanisms, no new numbers, no new caveats. If a technical field is unclear,
@@ -8,7 +8,7 @@ render it faithfully at the same level of precision — do not resolve ambiguity
 
 This step is deliberately mechanical so it can run on a cheaper/faster model tier (the same tier
 `NOVELTY_LLM_CLASSIFY_FAST_CMD` names): no domain reasoning is required, only register control and
-Chinese translation quality. It runs AFTER the technical fill_map is assembled into a partial
+Korean translation quality. It runs AFTER the technical fill_map is assembled into a partial
 expansion, AFTER implementation audit, bounded source corrections and technical/cost review.
 
 ## Input (version-bound request)
@@ -58,25 +58,28 @@ are not cosmetic rules.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-▸ CHINESE WORD ORDER — applies to EVERY `_zh` field below
+▸ KOREAN SENTENCE SHAPE — applies to EVERY `_ko` field below
 
-An English relative clause becomes a SEPARATE Chinese clause. It does NOT become a
-modifier in front of the noun. Chinese cannot carry a long pre-nominal modifier: the
-reader has to reach the end before learning what is being described, and the sentence
-reads as translated rather than written.
+An English relative clause becomes a SEPARATE Korean clause or sentence. It does NOT become one
+long 관형절 stacked in front of the noun. Korean tolerates a short modifier, but a long one makes
+the reader hold everything until the noun arrives, and the sentence reads as translated rather
+than written.
 
-The test is mechanical — if what sits before 的 runs past ~18 characters with no comma,
-split it. Put the noun first and let the description follow as its own clause.
+The test is mechanical — if the modifier in front of a noun (ending in -는/-은/-ㄴ/-할/-던 + noun)
+runs past ~25 characters with no comma, split it. Name the thing first, then describe it.
 
-  WRONG  一个在九个部分正确而只在一个部分失败的程序会得到与完全坏掉的程序相同的分数
-  RIGHT  一个程序九个部分都对、只有一个部分错，它拿到的分数却和完全坏掉的程序一样
+  WRONG  아홉 부분은 맞고 한 부분만 틀린 프로그램도 완전히 망가진 프로그램과 같은 점수를 받는다
+  RIGHT  어떤 프로그램은 아홉 부분이 맞고 한 부분만 틀렸다. 그런데도 완전히 망가진 프로그램과
+         같은 점수를 받는다
 
-  WRONG  引用不存在菜单命令或视频从未演示过的 API 签名的技能会通过同样的检查
-  RIGHT  有的技能引用了不存在的菜单命令，有的引用了视频从未演示过的 API 签名 —— 它们
-         通过的检查和正确技能完全一样
+  WRONG  존재하지 않는 메뉴 명령이나 영상에서 한 번도 시연되지 않은 API 시그니처를 참조하는 스킬도 같은 검사를 통과한다
+  RIGHT  어떤 스킬은 존재하지 않는 메뉴 명령을, 어떤 스킬은 영상에서 시연된 적 없는 API 시그니처를
+         참조한다 — 그래도 올바른 스킬과 똑같이 검사를 통과한다
 
-Two more calques to avoid: `held-out` is 留出 (not 保留), and "the two bits" is 两个二值
-判定 (not 两个位, which reads as two positions).
+Terminology: write the Korean term and put the English in parentheses on first use only
+(예: 보류 검증 집합(held-out set)); afterwards use one form consistently. Terms that Korean ML
+writing normally leaves in English (GRPO, LoRA, token, batch, embedding) may stay in English.
+Use the plain declarative register (-다), not the polite register (-습니다/-요).
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## Output (a flat derive_map JSON)
@@ -85,13 +88,13 @@ Write `$RUN_DIR/phase4/derive_map.json` containing EXACTLY these 7 paths and not
 
 ```json
 {
-  "title_zh": "...",
+  "title_ko": "...",
   "plain_motivation_en": "...",
-  "plain_motivation_zh": "...",
+  "plain_motivation_ko": "...",
   "plain_method_steps_en": [...],
-  "plain_method_steps_zh": [...],
+  "plain_method_steps_ko": [...],
   "plain_method_modules_en": [...],
-  "plain_method_modules_zh": [...]
+  "plain_method_modules_ko": [...]
 }
 ```
 
@@ -101,7 +104,7 @@ overlapping paths are a hard error, so never emit any other path — in particul
 
 ## Field schemas
 
-**`title_zh`** — Chinese translation of `title`. Natural academic Chinese; keep proper nouns and
+**`title_ko`** — Korean translation of `title`. Natural academic Korean; keep proper nouns and
 method acronyms in English (e.g. GRPO, PB-GRPO).
 
 **`plain_motivation_en`** — plain-language English rendering of the finished `motivation.*` fields
@@ -121,22 +124,22 @@ what_changes_when_gap_closes.
     RIGHT  Self-evolving agents decide each round which skills to keep, but that decision is
            scored by the same run that produced the skill. (A self-evolving agent is ...)
 
-**`plain_motivation_zh`** — Chinese 普通版 counterpart. Same content and mechanism; keep code
+**`plain_motivation_ko`** — Korean plain-register counterpart. Same content and mechanism; keep code
 identifiers, math symbols, file paths, and method/abbreviation acronyms in English (e.g. GRPO,
-m_q, A_i). Obeys CHINESE WORD ORDER above.
+m_q, A_i). Obeys KOREAN SENTENCE SHAPE above.
 
-**`plain_method_steps_en`** and **`plain_method_steps_zh`** — per-step plain rendering mirroring
+**`plain_method_steps_en`** and **`plain_method_steps_ko`** — per-step plain rendering mirroring
 `method_flow.steps`: SAME step_ids, SAME count, SAME order. Each entry:
 `{step_id, what_to_do, why_this_makes_sense}`. Preserve units / parameters / inputs / outputs;
 drop only the jargon framing fields (`linked_component`, `linked_falsification`).
 
-**`plain_method_modules_en`** and **`plain_method_modules_zh`** — group the steps into named
+**`plain_method_modules_en`** and **`plain_method_modules_ko`** — group the steps into named
 modules. Each entry: `{module_id, module_title, purpose_oneline, step_ids}`. Derive the grouping
 from `method_flow` (its step titles and the modules implied by the technical prose); the same
 grouping must appear in both languages. `module_title` is the heading the reader sees on the card:
-a short noun phrase in that entry's language naming what the module IS (en ≤ 8 words, zh ≤ 12
-characters), e.g. "Priced edit-slot allocation" / "编辑槽的定价分配" — never the id, never a
-sentence. The setup module is titled "Background" / "背景".
+a short noun phrase in that entry's language naming what the module IS (en ≤ 8 words, ko ≤ 16
+characters), e.g. "Priced edit-slot allocation" / "편집 슬롯의 가격 기반 할당" — never the id, never a
+sentence. The setup module is titled "Background" / "배경".
 
 A method has THREE kinds of step, and the renderer floats anything named Background/scaffolding to
 the FRONT — so the split decides reading order, not just labels:
@@ -156,7 +159,7 @@ the FRONT — so the split decides reading order, not just labels:
 
 ## Hard rules
 
-1. **Mirror rule**: `plain_method_steps_{en,zh}` MUST mirror `method_flow.steps` exactly — same
+1. **Mirror rule**: `plain_method_steps_{en,ko}` MUST mirror `method_flow.steps` exactly — same
    `step_id`s, same count, same order. The `expansion_completeness` validator enforces this.
 2. **Symbol rendering**: every plain field renders verbatim in plain Markdown with no math engine.
    Inline math symbols MUST be Unicode glyphs (σ η κ δ ε λ μ θ ² ≥ ≤ → ≠ R̄) NOT ASCII
@@ -165,13 +168,13 @@ the FRONT — so the split decides reading order, not just labels:
    to what a quantity means in words.
 3. **No new content**: if you find yourself writing a sentence with no source in the technical
    fields, delete it. Fidelity beats fluency.
-4. **Register**: the zh fields target a domain-newcomer reader (研究生新生能读懂); the en plain
+4. **Register**: the ko fields target a domain-newcomer reader (a first-year Korean graduate student can follow it); the en plain
    fields target a technically-literate reader outside this subfield. Neither is a children's
    explanation — keep every quantity and condition.
 
 ## Delivery sections and audience
-Fill EVERY remaining plain_* and title_zh TODO, including plain_core_claim_en/zh,
-plain_falsification_en/zh, plain_resource_summary_en/zh, plain_open_questions_en/zh.
+Fill EVERY remaining plain_* and title_ko TODO, including plain_core_claim_en/ko,
+plain_falsification_en/ko, plain_resource_summary_en/ko, plain_open_questions_en/ko.
 The resource summary names original estimate, current estimate, user ceiling, feasibility
 and uncertainty from the cost assessment. The falsification section preserves experiment,
 metric/direction, controls and failure conditions. Open questions include ordinary choices
