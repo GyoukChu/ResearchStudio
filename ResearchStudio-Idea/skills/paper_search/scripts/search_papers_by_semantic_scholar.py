@@ -3,9 +3,42 @@
 
 import argparse
 import os
+import tempfile
 import time
 
 from _http_runtime import create_session, request
+
+# S2's key tier is 1 request/s CUMULATIVE per key (keyless ~100 / 5 min). paper-search runs each source
+# in its own worker process and callers overlap, so pacing must be machine-wide: serialize on a lockfile
+# in the system temp dir (shared with idea-spark's scripts/s2_throttle.py) and hold the exclusive lock
+# across the sleep, as the arXiv connector does. SEMANTICSCHOLAR_MIN_INTERVAL overrides the keyed 1.1 s.
+_THROTTLE_FILE = os.path.join(tempfile.gettempdir(), "semanticscholar_throttle.lock")
+
+
+def _throttle(keyed: bool) -> None:
+    """Block until the interval has elapsed since the last S2 request fired on this machine."""
+    wait_for = float(os.environ.get("SEMANTICSCHOLAR_MIN_INTERVAL", "1.1")) if keyed else 3.0
+    try:
+        import fcntl
+    except ImportError:
+        time.sleep(wait_for)
+        return
+    fd = os.open(_THROTTLE_FILE, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        raw = os.read(fd, 64).decode("utf-8").strip()
+        try:
+            last = float(raw) if raw else 0.0
+        except ValueError:
+            last = 0.0
+        wait = wait_for - (time.time() - last)
+        if wait > 0:
+            time.sleep(wait)
+        os.lseek(fd, 0, os.SEEK_SET)
+        os.ftruncate(fd, 0)
+        os.write(fd, str(time.time()).encode("utf-8"))
+    finally:
+        os.close(fd)  # releasing the fd also releases the flock
 
 
 def search_papers_by_semantic_scholar(
@@ -51,6 +84,7 @@ def search_papers_by_semantic_scholar(
             source="semantic_scholar",
             params=params,
             headers=headers,
+            before_attempt=lambda: _throttle(bool(API_KEY)),
         )
         response.raise_for_status()
         data = response.json()
@@ -82,8 +116,6 @@ def search_papers_by_semantic_scholar(
 
         if offset >= data.get("total", 0):
             break
-
-        time.sleep(1)  # Be polite to the API
 
     return papers[:max_results]
 

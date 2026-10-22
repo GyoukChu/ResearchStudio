@@ -42,6 +42,11 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable, Optional
+try:
+    from scripts.s2_throttle import throttle as _s2_throttle
+except ImportError:                       # run as a plain script from scripts/
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from s2_throttle import throttle as _s2_throttle
 
 
 # ---------------------------------------------------------------------------
@@ -267,10 +272,8 @@ def parse_raw_text_sections(text: str, intro_max: int = 10000, method_max: int =
 # Public entry — try paths in priority order
 # ---------------------------------------------------------------------------
 
-# SS API has strict rate limits (1 req/s with key, ~100 req/5min anonymous).
-# We track the last call time to throttle SS lookups across the fetch loop.
-_last_ss_call_at: float = 0.0
-_SS_MIN_INTERVAL_SEC: float = 1.2
+# SS API has strict rate limits (1 req/s with key, ~100 req/5min anonymous). The lookups run from
+# fetch_pool's thread pool, so pacing is machine-wide (scripts/s2_throttle.py), not a shared timestamp.
 
 
 def _resolve_arxiv_via_ss(doi: Optional[str], ss_id: Optional[str]) -> Optional[str]:
@@ -278,10 +281,9 @@ def _resolve_arxiv_via_ss(doi: Optional[str], ss_id: Optional[str]) -> Optional[
     endpoint if it has a recorded ArXiv cross-reference. SS often has this even
     when OpenAlex / SS-search-API records do not surface it.
 
-    Returns the arxiv ID (e.g., "2412.14171") or None. Throttles to 1.2s
-    between calls and retries once on 429; tolerates other errors silently.
+    Returns the arxiv ID (e.g., "2412.14171") or None. Paced machine-wide and
+    retries once on 429; tolerates other errors silently.
     """
-    global _last_ss_call_at
     if not doi and not ss_id:
         return None
     candidates = []
@@ -294,16 +296,12 @@ def _resolve_arxiv_via_ss(doi: Optional[str], ss_id: Optional[str]) -> Optional[
     for lookup in candidates:
         url = f"https://api.semanticscholar.org/graph/v1/paper/{urllib.parse.quote(lookup, safe=':/')}?fields=externalIds"
         for attempt in range(2):
-            # Throttle: wait until at least _SS_MIN_INTERVAL_SEC elapsed since last call
-            since_last = time.time() - _last_ss_call_at
-            if since_last < _SS_MIN_INTERVAL_SEC:
-                time.sleep(_SS_MIN_INTERVAL_SEC - since_last)
+            _s2_throttle(bool(api_key))
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "idea-spark/1.0"})
                 if api_key:
                     req.add_header("x-api-key", api_key)
                 with urllib.request.urlopen(req, timeout=15) as r:
-                    _last_ss_call_at = time.time()
                     if r.status != 200:
                         break
                     data = json.loads(r.read())
@@ -313,7 +311,6 @@ def _resolve_arxiv_via_ss(doi: Optional[str], ss_id: Optional[str]) -> Optional[
                     return re.sub(r"v\d+$", "", str(arxiv))
                 break
             except urllib.error.HTTPError as e:
-                _last_ss_call_at = time.time()
                 if e.code == 429 and attempt == 0:
                     # Retry once after a longer backoff
                     time.sleep(5)
@@ -328,29 +325,24 @@ def _resolve_oa_pdf_via_ss(doi: str) -> Optional[str]:
     """Ask Semantic Scholar's paper-lookup endpoint (by DOI) for an open-access
     PDF url. Same throttle/retry discipline as _resolve_arxiv_via_ss. Returns
     the url or None; tolerates all errors silently."""
-    global _last_ss_call_at
     if not doi:
         return None
     api_key = os.environ.get("SEMANTICSCHOLAR_API_KEY", "")
     url = (f"https://api.semanticscholar.org/graph/v1/paper/"
            f"{urllib.parse.quote(f'DOI:{doi}', safe=':/')}?fields=openAccessPdf")
     for attempt in range(2):
-        since_last = time.time() - _last_ss_call_at
-        if since_last < _SS_MIN_INTERVAL_SEC:
-            time.sleep(_SS_MIN_INTERVAL_SEC - since_last)
+        _s2_throttle(bool(api_key))
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "idea-spark/1.0"})
             if api_key:
                 req.add_header("x-api-key", api_key)
             with urllib.request.urlopen(req, timeout=15) as r:
-                _last_ss_call_at = time.time()
                 if r.status != 200:
                     return None
                 data = json.loads(r.read())
             oa = data.get("openAccessPdf") or {}
             return oa.get("url") or None
         except urllib.error.HTTPError as e:
-            _last_ss_call_at = time.time()
             if e.code == 429 and attempt == 0:
                 time.sleep(5)
                 continue

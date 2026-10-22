@@ -28,6 +28,11 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+try:
+    from scripts.s2_throttle import throttle as _s2_throttle
+except ImportError:                       # run as a plain script from scripts/
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from s2_throttle import throttle as _s2_throttle
 
 API = 'https://api.semanticscholar.org/graph/v1/paper/search'
 
@@ -76,6 +81,7 @@ def _get_json(url, headers):
     if _KEY_REJECTED[0]:
         headers = {k: v for k, v in headers.items() if k != 'x-api-key'}
     for attempt in range(len(_BACKOFF_S) + 1):
+        _s2_throttle('x-api-key' in headers)   # machine-wide pacing: every attempt, retries included
         req = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=45) as r:
@@ -193,9 +199,7 @@ def main():
             per_query.append([])
             continue
         per_query.append(hits)
-        # Rate limit: 1 req/sec cumulative (introductory key tier); anonymous tier ~0.3/sec.
-        # Sleep 1.1s with key (safe margin); 3s without (anonymous tier is bursty).
-        time.sleep(1.1 if (os.environ.get('SEMANTICSCHOLAR_API_KEY') and not _KEY_REJECTED[0]) else 3.0)
+        # Pacing (1 req/s cumulative with a key, ~0.3/s keyless) is machine-wide, in _get_json.
 
     # Round-robin so every role-differentiated query gets a floor — concatenate-
     # then-truncate made query ORDER the priority and starved later queries. See
