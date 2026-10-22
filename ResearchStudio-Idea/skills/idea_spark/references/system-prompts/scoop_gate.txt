@@ -30,15 +30,13 @@ Gate-mode adaptations of the scoop-check procedure (everything else is as SKILL.
    structured verdict below carries every step's result.
 2. Full-text fetches: run `fetch_paper.sh` with `CLAUDE_PROJECT_DIR=$RUN_DIR/context` so PDFs land in
    `$RUN_DIR/context/papers/` (shared across cycles — reuse a text that is already there).
-3. Year range for the searches: the last 6 years up to today; the alias channel's older ancestors are
-   already in the collision pool.
-4. Step 5/6 axis judgments are BINARY. Each of the four axes of each deep-dive prior work is exactly
+3. Step 5/6 axis judgments are BINARY. Each of the four axes of each deep-dive prior work is exactly
    `match` or `differ` — resolve every "partial" to one of them. `match` means the prior work's axis is
    described by the SAME statement as the candidate's axis at the specificity of your Step 1
    decomposition. For `core_mechanism`, the same technical move (same object, same operator, same role),
    not merely the same family; a different instance of a family is `differ` with the family named in
    the evidence. For `key_insight`, the same reason it works.
-5. The gate excuses problem_framing and application_domain when they are a prior work's ONLY matches
+4. The gate excuses problem_framing and application_domain when they are a prior work's ONLY matches
    (the run was asked to solve this problem, so every paper on it matches there). This changes nothing
    about how you judge those axes — judge all four honestly; the program applies the rule.
 
@@ -79,6 +77,6 @@ passed; the program prepends its computed gate line to both reports.
 Hard rules:
 - No fabricated papers. A model-recall entry you cannot locate (no fetch, no abstract page) is dropped,
   not kept on memory alone.
-- `level` must equal 5 minus the matching axes; `overall_level` must equal the minimum. The record step
-  rejects a mismatch and the program recomputes regardless.
+- `level` must equal 5 minus the matching axes (the record step rejects a mismatch); `overall_level` is
+  the minimum. The program recomputes both from the axes regardless.
 - Every `match` needs its shared statement in `evidence`.

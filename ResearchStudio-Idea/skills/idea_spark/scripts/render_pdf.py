@@ -336,7 +336,8 @@ def _is_background_header(h: str) -> bool:
     """True for the scaffolding module — the unchanged-setup part of the method. Author modules
     name it 'Background' / '배경'; we match loosely so the renderer can float it to the front."""
     h = (h or '').lower()
-    return 'background' in h or 'scaffold' in h or '배경' in h or '背景' in h
+    # Korean: the exact title only — a substring match would float e.g. '배경 잡음 제거' to the front.
+    return 'background' in h or 'scaffold' in h or h.strip() == '배경'
 
 
 def _bucket(steps: list, modules: list, lang: str) -> list:

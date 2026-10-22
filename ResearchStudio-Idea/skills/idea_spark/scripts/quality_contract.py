@@ -184,7 +184,7 @@ def assemble_parts(sd, req):
 
 
 def record_findings(run, stage, payloads):
-    """Rules the author can satisfy in the result itself. plain_derive: the Korean sentence-shape rule
+    """Rules the author can satisfy in the result itself. plain_derive: the Korean register/calque rule
     (a rule, not a request — checked before commit, so the fix is a field edit and not a re-render).
     generation: every Phase 1 collateral family is either queried by an alias term or named in
     composition_note as unreachable (the audit weighs the reason; silence was the measured failure)."""
@@ -196,7 +196,7 @@ def record_findings(run, stage, payloads):
         out += contract_findings(payloads)
     if stage == 'plain_derive':
         for payload in payloads.values():
-            out += [f for f in korean_sentence_shape_findings(payload) if f.get('severity') in ('warn', 'fail')]
+            out += [f for f in korean_sentence_shape_findings(payload, handshake=True) if f.get('severity') in ('warn', 'fail')]
     if stage == 'generation':
         p1 = read(run / PHASE1, {})
         for rel, payload in payloads.items():

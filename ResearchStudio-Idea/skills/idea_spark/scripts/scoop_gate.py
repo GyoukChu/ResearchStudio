@@ -46,9 +46,10 @@ def scoop_from_env():
 
 
 def run_scoop(contract):
-    """The run's gate setting. A contract written before the gate existed reads the current env."""
+    """The run's gate setting. A contract written before the gate existed ran without it and keeps
+    running without it (like `run_depth`), so no run gains a heavy call partway through."""
     s = contract.get('scoop') if isinstance(contract, dict) else None
-    return s if isinstance(s, dict) and 'enabled' in s and 'min_level' in s else scoop_from_env()
+    return s if isinstance(s, dict) and 'enabled' in s and 'min_level' in s else {'enabled': False, 'min_level': 4}
 
 
 def _matches(pw):
@@ -90,6 +91,13 @@ def summary(ev):
             f"(matching axes: {', '.join(c['matched']) or 'none'})")
 
 
+def summary_ko(ev):
+    c = ev['closest']
+    return (f"게이트 Level {ev['gate_level']} — {ev['gate_label']} (scoop-check 원 판정 Level {ev['raw_level']} — "
+            f"{ev['raw_label']}; 기준 Level {ev['min_level']}); 가장 가까운 선행 연구: {c['title']} "
+            f"(일치 축: {', '.join(c['matched']) or '없음'})")
+
+
 def contract_findings(payloads):
     """Rules the reviewer can satisfy in the result itself; checked before commit (record handshake)."""
     from scripts.quality_contract import finding
@@ -107,7 +115,10 @@ def contract_findings(payloads):
                     out.append(finding('scoop_contract', f'prior_works[{i}].axes must give each of {", ".join(AXES)} '
                                        'as exactly "match" or "differ" (resolve a partial to one of them).'))
                     continue
-                declared = pw.get('level')
+                try:
+                    declared = None if pw.get('level') is None else int(pw.get('level'))
+                except (TypeError, ValueError):
+                    declared = -1
                 if declared is not None and declared != 5 - len(_matches(pw)):
                     out.append(finding('scoop_contract', f'prior_works[{i}].level {declared} != 5 - matching axes '
                                        f'({5 - len(_matches(pw))}); the level follows the axes.'))
@@ -135,6 +146,7 @@ def write_reports(run, min_level=4):
     head = {'en': '> **Novelty gate (idea-spark): ' + ('PASS' if ev and ev['passed'] else 'FAIL') + '** — ',
             'ko': '> **새로움 게이트 (idea-spark): ' + ('통과' if ev and ev['passed'] else '미달') + '** — '}
     for lang, rel in REPORT_MD.items():
-        line = head[lang] + (summary(ev) if ev else 'verdict not computable from the recorded axes')
+        line = head[lang] + ((summary_ko(ev) if lang == 'ko' else summary(ev)) if ev else
+                             'verdict not computable from the recorded axes')
         (Path(run) / rel).write_text(line + '\n\n' + str(report.get('report_' + lang, '')).rstrip() + '\n')
     return list(REPORT_MD.values())

@@ -481,7 +481,7 @@ def versioned_lessons(d, current):
 
 def _attempt_summary(a, label):
     """Everything a reader needs about one candidate cycle, from files that already exist."""
-    cand = (read(a / REFINED, None) if (a / REFINED).exists() else None) or (read(a / REPAIRED_CAND, None) if (a / REPAIRED_CAND).exists() else None) or read(a / GEN, {})
+    cand = (read(a / FINAL, None) if (a / FINAL).exists() else None) or (read(a / REFINED, None) if (a / REFINED).exists() else None) or (read(a / REPAIRED_CAND, None) if (a / REPAIRED_CAND).exists() else None) or read(a / GEN, {})
     sel = read(a / SEL, {}); crit = read(a / CRIT, {})
     findings = {b.get('finding_id'): b for b in read(a / 'phase2_coherence/blocking_findings.json', {}).get('findings', [])}
     upheld = {resolve_finding_ref(x.get('finding_ref'), findings) or str(x.get('finding_ref'))
@@ -502,16 +502,18 @@ def write_failure_report(d, attempts):
     least-refuted candidate, not an audited-passed one: the card pipeline is not run on it, and the
     report says so. Its candidate JSON is copied out so a user who wants to keep working has the text."""
     rows = [_attempt_summary(a, a.name) for a in attempts] + [_attempt_summary(d, 'final cycle')]
-    best = sorted(enumerate(rows), key=lambda ir: (ir[1]['layer'] == 'hard_floor', len(ir[1]['upheld']), -ir[0]))[0][1]
+    novelty = bool(rows[-1]['scoop'])          # the final cycle is the restored best-novelty cycle
+    best = rows[-1] if novelty else sorted(enumerate(rows), key=lambda ir: (ir[1]['layer'] == 'hard_floor', len(ir[1]['upheld']), -ir[0]))[0][1]
     out = ['# Proposal not advanced', '',
+           'Candidate-cycle cap or information gain exhausted. Every cycle below was refused by the audit on '
+           'executed or quoted evidence, or cleared the audit and was refused by the novelty gate (scoop-check on '
+           'its final method). The final cycle is the one that cleared the audit with the best novelty level; '
+           'unless IDEASPARK_FAILED_CARD=off it is printed as a card marked FAILED VALIDATION (scoop (novelty gate)), '
+           'with its novelty reports in phase3_scoop/.' if novelty else
            'Candidate-cycle cap or information gain exhausted. No card was produced: every cycle below was '
            'refused by the audit on executed or quoted evidence, and the pipeline does not print a mechanism '
            'its own trace refuted. The best cycle is reproduced in full at the end for a reader who wants to '
            'take it further by hand; it is an unaudited draft, not a proposal.', '']
-    if any(r['scoop'] for r in rows):
-        out += ['Cycles refused by the novelty gate (scoop-check on the final method) had cleared the audit. The one with '
-                'the best novelty level is the final cycle here; unless IDEASPARK_FAILED_CARD=off it is printed as a card '
-                'marked FAILED VALIDATION (scoop (novelty gate)), with its novelty reports in phase3_scoop/.', '']
     for r in rows:
         out += [f"## {r['label']}: {r['title']}", '',
                 f"patterns: {', '.join(p for p in r['patterns'] if p)} · verdict: {r['verdict']} ({r['layer']})", '',
@@ -520,6 +522,7 @@ def write_failure_report(d, attempts):
         for f in r['upheld']: out += [f"- executed finding upheld: {str(f)[:400]}", '']
     c = best['candidate']
     out += [f"## Best cycle in full (unaudited draft): {best['title']}", '',
+            ('Chosen because: it cleared the audit and has the best novelty level — ' + summary(best['scoop'])) if novelty else
             f"Chosen because: {'no hard floor; ' if best['layer'] != 'hard_floor' else ''}{len(best['upheld'])} upheld executed finding(s).", '',
             '### core_mechanism', '', str(c.get('core_mechanism', '')), '',
             '### core_mechanism_steps', '', str(c.get('core_mechanism_steps', '')), '',
@@ -540,23 +543,21 @@ def scoop_failure(d):
     """The novelty gate's evaluation when it refused this cycle's committed verdict, else None."""
     if not (d / SCOOP).exists():
         return None
-    contract = read(d / 'run_contract.json', {}) or read(d.parent / 'run_contract.json', {})
-    from scripts.scoop_gate import run_scoop
-    ev = evaluate(read(d / SCOOP, {}), run_scoop(contract)['min_level'])
+    ev = evaluate(read(d / SCOOP, {}), run_scoop_setting(d if (d / 'run_contract.json').exists() else d.parent)['min_level'])
     return ev if ev and not ev['passed'] else None
 
 
 def restore_best_scoop_cycle(d, attempts):
-    """Budget exhausted on a novelty refusal: the card is printed from the cycle with the best novelty level
-    (gate level, then raw level, then latest). Only cycles refused by the gate alone qualify (they cleared
-    the audit). The chosen cycle's files and receipts move back into place with the contract they were sealed
+    """Budget exhausted with at least one novelty refusal on record: the card is printed from the cycle with
+    the best novelty level (gate level, then raw level, then latest). Only cycles refused by the gate alone
+    qualify (they cleared the audit), so one always outranks a current cycle the audit abandoned. The chosen cycle's files and receipts move back into place with the contract they were sealed
     under, and with the Phase 1 they were generated from when a bottleneck re-diagnosis replaced it since;
     the current cycle is archived like any other."""
     pool = [(scoop_failure(a), int(a.name[8:]), a) for a in attempts if (a / 'run_contract.json').exists()]
     pool = [x for x in pool if x[0]]
     current = scoop_failure(d)
     best = max(pool, key=lambda x: (x[0]['gate_level'], x[0]['raw_level'], x[1]), default=None)
-    if not best or (best[0]['gate_level'], best[0]['raw_level']) <= (current['gate_level'], current['raw_level']):
+    if not best or (current and (best[0]['gate_level'], best[0]['raw_level']) <= (current['gate_level'], current['raw_level'])):
         return
     _, j, src = best
     # A bottleneck retry archives the Phase 1 that cycles up to its own index were generated from.
@@ -590,9 +591,8 @@ def retry(d):
     if (d / '.bottleneck_retry_used').exists() or (attempts and not bottleneck and
             (not lessons - seen or len(attempts) + 1 >= 3)):
         # Deterministic diagnostic; no extra model call needed to format a failure.
-        if scoop_failure(d):
-            restore_best_scoop_cycle(d, attempts)
-            attempts = _attempt_dirs(d)
+        restore_best_scoop_cycle(d, attempts)
+        attempts = _attempt_dirs(d)
         write_failure_report(d, attempts)
         return
     index = max([int(p.name[8:]) for p in attempts] + [0]) + 1

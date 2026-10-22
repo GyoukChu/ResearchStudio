@@ -43,7 +43,7 @@ author twice; four smaller writes did not). (2) `quality_record` REJECTS a resul
 the author can fix in the result itself, without a needs_work: the request stays open, `next`
 re-emits the same step with the findings, and the fixed result is recorded against the same
 request_id. The third result on one request is committed with the findings kept as warns. Rules:
-plain_derive — the Korean sentence-shape rule (no Korean run past 90 characters without a break, plain -다 register);
+plain_derive — the Korean register rule (plain -다 register, no known calque; the long-run check is reported at publish only);
 generation — every Phase 1 collateral family is queried by an alias term or named in
 `composition_note` as unreachable.
 
@@ -266,19 +266,25 @@ levels. Raw level = 5 − matching axes (scoop-check's own verdict). Gate level 
 matches lie entirely within {problem_framing, application_domain} — the run was asked to solve this
 problem, so every paper on it matches there — else the raw level. PASS when every prior work's gate
 level ≥ the run's bar (`IDEASPARK_SCOOP_MIN_LEVEL`, default 4 = Low Overlap; `IDEASPARK_SCOOP=off`
-disables the gate; both fixed at init in run_contract.json `scoop`).
+disables the gate; both fixed at init in run_contract.json `scoop`; a contract written before the gate
+existed runs without it).
 
 Artifacts: `phase3_scoop/scoop_verdict.json` (structured), `phase3_scoop/scoop_report.json` (full report,
 English + Korean), and the deterministic `scoop_report` step writes `scoop_report.en.md` /
 `scoop_report.ko.md`, each headed by the computed gate line. The DONE step names them beside the cards.
 
 FAIL → the existing bounded retry: the cycle is archived (with `phase3_scoop/`), the closest prior work
-becomes a `threat` lesson (so a repeated scoop refusal triggers the one bottleneck re-diagnosis, and a
-refusal on the same paper twice has no information gain), and the next generation reads the archived
-verdict as confirmed prior art. When the budget runs out on a novelty refusal, the cycle with the best
-novelty level (gate level, then raw level, then latest; same Phase 1 only) is restored into place and
-printed as a card marked `FAILED VALIDATION (scoop (novelty gate))`; `phase_3_failed.md` lists every
-cycle with its gate line.
+becomes a `threat` lesson (so a second threat on record — a repeated scoop refusal included — triggers
+the one bottleneck re-diagnosis, whose Phase 1 reads the archived scoop verdicts as occupied ground), and
+the next generation reads the archived verdict as confirmed prior art. When the budget runs out and any
+cycle was refused by the gate, the gate-refused cycle with the best novelty level (gate level, then raw
+level, then latest) is restored into place — with the Phase 1 it was generated from when a re-diagnosis
+replaced it since — and printed as a card marked `FAILED VALIDATION (scoop (novelty gate))`; a cycle that
+cleared the audit always outranks one the audit abandoned. `phase_3_failed.md` lists every cycle with its
+gate line.
+
+The gate reads the whole candidate, so at experiment depth a Phase 4 falsification revision (which
+rewrites final_candidate.json) re-runs it once.
 
 ## LLM calls, complete inventory
 
@@ -300,7 +306,7 @@ Every reasoning call the skill can ask a host for, with when it fires. Determini
 | 12 | revision | when the verdict is revise; +1 re-revision when the review's needs_work is more than clause-level (once per transaction) | 0–2 |
 | 13 | post-revision review | one per revision transaction | 0–2 |
 | 14 | post-novelty | only when the reviewer confirms terms the refreshed pool lacked | 0–1 |
-| 14b | scoop gate (scoop-check on the final method) | once per cycle that clears the audit, unless IDEASPARK_SCOOP=off | 0–1 |
+| 14b | scoop gate (scoop-check on the final method) | once per cycle that clears the audit, unless IDEASPARK_SCOOP=off; +1 after a Phase 4 falsification revision (experiment depth) | 0–2 |
 | 15 | technical fill | once per Phase 4 pass | 1 |
 | 16 | implementability audit + cost | once per Phase 4 pass | 1 |
 | 17 | technical repair | only when a step stopped, a structural contradiction, or the cost exceeds the ceiling | 0–1 |
@@ -313,8 +319,8 @@ Depth: rows 17–18 and the falsification-revision route fire only at `IDEASPARK
 Routes: an abandoned cycle costs its own 7–10 (no Phase 4); the Phase 4 falsification revision adds 12–13
 once (+re-revision) and repeats 15–18; the failed-validation card adds only the card stages not yet run
 (19; 15–16 after a Phase 3 failure). A clean advance with no repair round is 7 quality-flow calls
-(7, 8, 10, 14b, 15, 16, 19); the observed range with revision, two repair rounds and a technical repair is
-14–18.
+(7, 8, 10, 14b, 15, 16, 19); the observed range with revision, two repair rounds and a technical repair was
+14–18 before the scoop gate (now 15–19).
 
 ## Technical source and resources
 

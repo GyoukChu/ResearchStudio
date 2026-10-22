@@ -162,16 +162,12 @@ def _retrieval_next_step(run_dir: Path, root: Path, query: str | None = None, em
                      notes=f'Return {d}/phase_3_failed.md contents as the final response.',
                      then=False)
     cards = [d / 'phase4' / n for n in ('idea.std.en.md', 'idea.std.ko.md', 'idea.detail.en.md')]
-    reports = [d / 'phase3_scoop' / n for n in ('scoop_report.en.md', 'scoop_report.ko.md')]
     if all(c.exists() for c in cards):
         return _emit('DONE — all three idea cards rendered.',
                      'Return the cards inline', 'terminal',
                      notes='Read all three files and return them as the final response under '
                            'headings English (main) / 한국어 / Reviewer version: '
-                           + ', '.join(str(c) for c in cards)
-                           + ('. Then the novelty gate line (first line of each) and the paths of the scoop-check '
-                              'reports: ' + ', '.join(str(r) for r in reports) if all(r.exists() for r in reports) else ''),
-                     then=False)
+                           + ', '.join(str(c) for c in cards), then=False)
 
     p0 = d / 'phase0'
 
@@ -377,6 +373,8 @@ def _retrieval_next_step(run_dir: Path, root: Path, query: str | None = None, em
                 str(_a / 'phase3_critique' / 'phase3_critique_output.json')
                 for _a in _attempt_dirs(d)
                 if (_a / 'phase3_critique' / 'phase3_critique_output.json').exists())
+            _scoops = [str(_a / 'phase3_scoop' / 'scoop_verdict.json') for _a in _attempt_dirs(d)
+                       if (_a / 'phase3_scoop' / 'scoop_verdict.json').exists()]
             p1_inputs.append(
                 'BOTTLENECK-RETRY MODE (see the OPTIONAL bottleneck-retry input in '
                 'bottleneck_identify.txt) — negative anchors: '
@@ -384,7 +382,10 @@ def _retrieval_next_step(run_dir: Path, root: Path, query: str | None = None, em
                 + ' (the RETIRED bottleneck_statement + anchor; do not re-frame it), plus '
                 + _crits
                 + ' (read ONLY paper_pointed_threat from each — the papers that killed the '
-                  'archived attempts define occupied ground)')
+                  'archived attempts define occupied ground)'
+                + (', plus ' + ' and '.join(_scoops) + ' (attempts that cleared the audit but the novelty gate '
+                   'refused: read closest_prior_work and the prior_works whose core_mechanism or key_insight '
+                   'is match — confirmed prior art for that mechanism, equally occupied ground)' if _scoops else ''))
         return _emit('Phase 0 complete.', 'Phase 1 — bottleneck identification', 'llm_subagent',
                      prompt=str(prompts / 'bottleneck_identify.txt'),
                      inputs=p1_inputs,

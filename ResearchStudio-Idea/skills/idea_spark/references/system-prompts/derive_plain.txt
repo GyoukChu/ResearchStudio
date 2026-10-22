@@ -65,8 +65,10 @@ long 관형절 stacked in front of the noun. Korean tolerates a short modifier, 
 the reader hold everything until the noun arrives, and the sentence reads as translated rather
 than written.
 
-The test is mechanical — if the modifier in front of a noun (ending in -는/-은/-ㄴ/-할/-던 + noun)
-runs past ~25 characters with no comma, split it. Name the thing first, then describe it.
+The test: if a modifier in front of a noun (ending in -는/-은/-ㄴ/-할/-던 + noun) runs past ~25
+characters with no comma, split it — name the thing first, then describe it. Clause-connective endings
+(-고, -며, -면, -지만) are fine; the validator flags only a run of more than 120 characters with no
+punctuation and no such ending, and the polite register (-습니다/-입니다).
 
   WRONG  아홉 부분은 맞고 한 부분만 틀린 프로그램도 완전히 망가진 프로그램과 같은 점수를 받는다
   RIGHT  어떤 프로그램은 아홉 부분이 맞고 한 부분만 틀렸다. 그런데도 완전히 망가진 프로그램과

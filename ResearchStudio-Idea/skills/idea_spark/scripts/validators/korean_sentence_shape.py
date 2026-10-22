@@ -6,10 +6,12 @@ relative clauses land as one long 관형절 chain in front of the noun, so the r
 the end of a long run before learning what is being described.
 
 `derive_plain.txt` states the rule (KOREAN SENTENCE SHAPE); this check is its mechanical floor:
-a run of Korean prose with no break (comma, full stop, semicolon, colon, parenthesis, dash) past a
-threshold, and the polite register (-습니다 / -입니다) where the card uses the plain -다 register.
-`warn` and not `fail` — a long run is a readability defect, not a broken contract, and a technical
-noun phrase can legitimately run long.
+a run of Korean prose past a threshold with no break — punctuation, or a clause-connective ending
+(-고 / -며 / -면 / -지만 / -는데 / -므로 / -여 / -서 followed by a space), since Korean chains clauses
+with endings rather than commas — and the polite register (-습니다 / -입니다) where the card uses the
+plain -다 register. `warn` and not `fail`. Only the register and calque checks run in the plain_derive
+record handshake (they are unambiguous); the long-run check is uncalibrated, so it is reported at
+publish and never bounces a derivation.
 """
 from __future__ import annotations
 
@@ -17,10 +19,10 @@ import json
 import re
 from pathlib import Path
 
-# A Korean sentence of ordinary length is 40-80 characters; a run past this with no break at all
-# is a stacked clause. Kept lenient because the plain_derive record handshake refuses on it.
-_MAX_RUN = 90
-_BREAK = re.compile(r'[,.;:()\[\]、，。；：（）—–!?·]|\n')
+# A Korean clause of ordinary length is 20-60 characters; a run past this with no punctuation and no
+# connective ending is a stacked 관형절 chain.
+_MAX_RUN = 120
+_BREAK = re.compile(r'[,.;:()\[\]、，。；：（）—–!?·]|\n|(?:고|며|면|지만|는데|므로|여|서)\s')
 _HANGUL = re.compile(r'[가-힣]')
 _POLITE = re.compile(r'(?:습니다|입니다|합니다|됩니다)(?=[.\s]|$)')
 
@@ -55,9 +57,9 @@ def validate_korean_sentence_shape(phase4_path: str) -> list[dict]:
     return korean_sentence_shape_findings(doc)
 
 
-def korean_sentence_shape_findings(doc) -> list[dict]:
-    """The same check on an in-memory document, so the plain_derive record handshake can refuse a
-    derivation that breaks the rule before it is committed (the author fixes the named fields)."""
+def korean_sentence_shape_findings(doc, handshake=False) -> list[dict]:
+    """The same check on an in-memory document. `handshake=True` (the plain_derive record step) runs only
+    the register and calque checks, which the author can satisfy without guessing at a threshold."""
     findings: list[dict] = []
     if not isinstance(doc, dict):
         return findings
@@ -66,7 +68,7 @@ def korean_sentence_shape_findings(doc) -> list[dict]:
     for label, text in _spans(doc):
         # Inline code and math are identifiers, not prose; they never count toward a run.
         prose = re.sub(r'`[^`]*`|\$[^$]*\$', ' ', text)
-        for run in _BREAK.split(prose):
+        for run in ([] if handshake else _BREAK.split(prose)):
             if len(run.strip()) > _MAX_RUN and _HANGUL.search(run):
                 long_hits.append((label, run.strip()[:34]))
                 break                     # one report per field is enough to act on
